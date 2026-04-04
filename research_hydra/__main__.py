@@ -5,15 +5,20 @@ import asyncio
 import json
 import logging
 import sys
+import os
 import uuid
 
+from .config import load_dotenv
 from .hydra_research_bridge import HydraResearchBridge
 from .workflow import run_literature_phase
 
 
 async def _async_main(argv: list[str] | None) -> int:
     parser = argparse.ArgumentParser(
-        description="Research Intern: arXiv literature + optional HydraDB recall/ingest → LLM analysis prompt.",
+        description=(
+            "Research Intern: gather corpus + optional Hydra, then run OpenAI-compatible analysis "
+            "(stdout is the model answer by default; use --prompt-only for the raw prompt)."
+        ),
     )
     parser.add_argument(
         "topic",
@@ -115,17 +120,27 @@ async def _async_main(argv: list[str] | None) -> int:
         help="Delay between Hydra uploads (default: 0.6)",
     )
     parser.add_argument(
+        "--prompt-only",
+        action="store_true",
+        help="Skip LLM: print/write only the analysis prompt (no API key needed)",
+    )
+    parser.add_argument(
+        "--llm-stream",
+        action="store_true",
+        help="Stream LLM output to stderr as it arrives (e.g. NVIDIA reasoning + answer)",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         default="",
         metavar="FILE",
-        help="Write analysis prompt to this file instead of stdout",
+        help="Write primary stdout content to this file (model analysis, or prompt with --prompt-only)",
     )
     parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
-        help="Less logging; prompt still on stdout or -o",
+        help="Less logging; primary output still on stdout or -o",
     )
     parser.add_argument(
         "-v",
@@ -138,6 +153,8 @@ async def _async_main(argv: list[str] | None) -> int:
     topic = (args.topic_flag or args.topic or "").strip()
     if not topic:
         parser.error("topic required (positional or -t/--topic)")
+
+    load_dotenv()
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else (logging.WARNING if args.quiet else logging.INFO),
@@ -152,6 +169,17 @@ async def _async_main(argv: list[str] | None) -> int:
     pm_max = 0 if args.arxiv_only else max(0, args.pubmed_max)
     oa_max = 0 if args.arxiv_only else max(0, args.openalex_max)
     s2_max = 0 if args.arxiv_only else max(0, args.semantic_scholar_max)
+
+    llm_complete = not args.prompt_only
+    has_llm_key = bool(
+        (os.environ.get("OPENAI_API_KEY", "").strip() or os.environ.get("NVIDIA_API_KEY", "").strip())
+    )
+    if llm_complete and not has_llm_key:
+        print(
+            "OPENAI_API_KEY or NVIDIA_API_KEY is not set. Add to .env, or use --prompt-only for the raw prompt.",
+            file=sys.stderr,
+        )
+        return 2
 
     bridge = None
     if not args.no_hydra:
@@ -178,16 +206,19 @@ async def _async_main(argv: list[str] | None) -> int:
         pubmed_max=pm_max,
         openalex_max=oa_max,
         semantic_scholar_max=s2_max,
+        llm_complete=llm_complete,
+        llm_stream=True if args.llm_stream else None,
     )
 
-    text = outcome.analysis_prompt
+    text = outcome.final_analysis if outcome.final_analysis is not None else outcome.analysis_prompt
     if args.output:
         path = args.output
         with open(path, "w", encoding="utf-8") as f:
             f.write(text)
         if not args.quiet:
+            kind = "analysis" if outcome.final_analysis is not None else "prompt"
             print(
-                f"Wrote prompt ({len(text)} chars) to {path!r}; "
+                f"Wrote {kind} ({len(text)} chars) to {path!r}; "
                 f"{len(outcome.papers)} corpus items; arXiv: {outcome.arxiv_search_query!r}; "
                 f"corpus_stats: {json.dumps(outcome.corpus_stats, sort_keys=True)}",
                 file=sys.stderr,
