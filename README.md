@@ -12,3 +12,17 @@
 6. **Thinking engine (optional)** — You can mirror an explicit chain-of-thought by calling `save_thinking_step` (hypothesis / verification flags) as the model steps through the prompt, then `save_session_synthesis` for the final brief.
 
 Code does **not** call an LLM for you: it collects evidence, hydrates HydraDB, and hands you a **prompt** (or you wire your own model and persist outputs).
+
+## Setup and tests
+
+Install dependencies from the repo root (includes optional SQLite for persistent sessions):
+
+```bash
+pip install -r requirements.txt
+```
+
+Run tests (in-memory sessions do not require `aiosqlite`; the SQLite store test is skipped if it is missing):
+
+```bash
+pytest
+```
