@@ -4,6 +4,7 @@ import re
 import urllib.parse
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from typing import Any
 
 import certifi
 import httpx
@@ -15,11 +16,17 @@ _DEFAULT_ML_CS_STATS_CATS = "(cat:cs.CL OR cat:cs.AI OR cat:cs.LG OR cat:stat.ML
 
 @dataclass(frozen=True)
 class PaperRecord:
+    """One text unit in the analysis corpus (arXiv preprint or keyless web source)."""
+
     arxiv_id: str
     title: str
     summary: str
     published: str
     abs_url: str
+    source: str = "arxiv"
+    authors: tuple[str, ...] = ()
+    venue: str = ""
+    citation_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -80,6 +87,11 @@ def _parse_arxiv_atom(raw: bytes) -> list[PaperRecord]:
         summary = (summary_el.text or "").strip()
         eid = (id_el.text or "").strip()
         published = (published_el.text or "")[:10] if published_el is not None else ""
+        authors: list[str] = []
+        for au in entry.findall(f"{_ATOM}author"):
+            ne = au.find(f"{_ATOM}name")
+            if ne is not None and (ne.text or "").strip():
+                authors.append((ne.text or "").strip())
         papers.append(
             PaperRecord(
                 arxiv_id=_arxiv_id_from_entry_id(eid),
@@ -87,6 +99,8 @@ def _parse_arxiv_atom(raw: bytes) -> list[PaperRecord]:
                 summary=summary,
                 published=published,
                 abs_url=eid if eid.startswith("http") else f"https://arxiv.org/abs/{eid}",
+                source="arxiv",
+                authors=tuple(authors),
             )
         )
     return papers
@@ -98,11 +112,12 @@ async def fetch_recent_papers(
     max_results: int = 30,
     restrict_cs_stat_ml: bool = True,
     raw_arxiv_query: bool = False,
+    client: httpx.AsyncClient | None = None,
 ) -> ArxivFetchResult:
     """
     Return recent arXiv papers (newest first) and the **exact** ``search_query`` sent to the API.
 
-    Uses ``httpx`` + ``certifi`` for TLS (avoids some Miniconda ``urllib`` CA issues).
+    Pass ``client`` to reuse TLS connections with other keyless fetches.
     """
     if not topic.strip():
         return ArxivFetchResult(papers=(), search_query="")
@@ -120,13 +135,33 @@ async def fetch_recent_papers(
     )
     headers = {"User-Agent": "ResearchIntern/1.0 (+https://arxiv.org/help/api)"}
 
+    async def _do_get(c: httpx.AsyncClient) -> ArxivFetchResult:
+        response = await c.get(url, headers=headers)
+        response.raise_for_status()
+        return ArxivFetchResult(papers=tuple(_parse_arxiv_atom(response.content)), search_query=search_query)
+
+    if client is not None:
+        return await _do_get(client)
     async with httpx.AsyncClient(
         timeout=60.0,
         verify=certifi.where(),
         follow_redirects=True,
-    ) as client:
-        response = await client.get(url, headers=headers)
-        response.raise_for_status()
-        raw = response.content
+    ) as c:
+        return await _do_get(c)
 
-    return ArxivFetchResult(papers=tuple(_parse_arxiv_atom(raw)), search_query=search_query)
+
+def corpus_metrics(papers: tuple[PaperRecord, ...]) -> dict[str, Any]:
+    """Counts by source and basic summary coverage (for dashboards or logging)."""
+    by_source: dict[str, int] = {}
+    for p in papers:
+        by_source[p.source] = by_source.get(p.source, 0) + 1
+    substantial = sum(1 for p in papers if len((p.summary or "").strip()) > 40)
+    with_venue = sum(1 for p in papers if (p.venue or "").strip())
+    with_authors = sum(1 for p in papers if p.authors)
+    return {
+        "total": len(papers),
+        "by_source": by_source,
+        "with_substantial_summary": substantial,
+        "with_venue": with_venue,
+        "with_authors": with_authors,
+    }
