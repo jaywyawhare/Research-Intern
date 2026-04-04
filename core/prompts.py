@@ -106,7 +106,7 @@ def build_thinking_protocol_prompt(
         "",
         "- `thought` (string): the content of this step.",
         "- `next_thought_needed` (boolean): true if you will continue after this message.",
-        f"- `thought_number` (integer ≥ 1): current step index (start at 1).",
+        "- `thought_number` (integer ≥ 1): current step index (start at 1).",
         f"- `total_thoughts` (integer ≥ 1): running estimate of total steps; start around {n}, adjust up if needed.",
         "",
         "### Optional fields",
