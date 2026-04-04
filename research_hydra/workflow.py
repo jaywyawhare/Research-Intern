@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import IO, TYPE_CHECKING, Any, Mapping
 
+from . import config as hydra_config
 from .arxiv_literature import PaperRecord, corpus_metrics, fetch_recent_papers
+from .llm_completion import run_analysis_completion
 from .open_http_literature import (
     fetch_crossref_records,
     fetch_europepmc_records,
@@ -36,6 +40,7 @@ class LiteraturePhaseOutcome:
     user_context: str
     knowledge_context: str
     analysis_prompt: str
+    final_analysis: str | None = None
 
 
 def _corpus_ingest_body(p: PaperRecord) -> str:
@@ -84,6 +89,15 @@ async def run_literature_phase(
     openalex_max: int = 0,
     semantic_scholar_max: int = 0,
     crossref_mailto: str | None = None,
+    llm_complete: bool = False,
+    openai_api_key: str | None = None,
+    openai_model: str | None = None,
+    openai_base_url: str | None = None,
+    openai_top_p: float | None = None,
+    openai_max_tokens: int | None = None,
+    openai_extra_body: dict[str, Any] | None = None,
+    llm_stream: bool | None = None,
+    llm_stream_to: IO[str] | None = None,
 ) -> LiteraturePhaseOutcome:
     """
     Load Hydra context, fetch recent arXiv papers for ``topic``, optionally ingest each
@@ -106,6 +120,12 @@ async def run_literature_phase(
     using a fresh ``session_id``.
 
     ``ingest_pause_seconds`` adds a short delay between uploads to ease rate limits and server load.
+
+    Set ``llm_complete=True`` to call an OpenAI-compatible chat API with the built prompt and
+    store the assistant reply in ``final_analysis`` (needs ``OPENAI_API_KEY``, ``NVIDIA_API_KEY``,
+    or ``openai_api_key``). Use ``llm_stream=True`` to stream chunks to ``llm_stream_to`` (default
+    ``sys.stderr``). Provider-specific JSON can be passed via ``openai_extra_body`` or env
+    ``OPENAI_EXTRA_BODY``; throttle with ``OPENAI_MAX_RPM`` (e.g. ``30``).
     """
     if bridge is None:
         user_ctx, know_ctx = "", ""
@@ -228,6 +248,38 @@ async def run_literature_phase(
         extra_source_summary=extra_source_summary,
     )
 
+    final: str | None = None
+    if llm_complete:
+        hydra_config.load_dotenv()
+        key = (openai_api_key or "").strip()
+        if not key:
+            key = os.environ.get("OPENAI_API_KEY", "").strip() or os.environ.get(
+                "NVIDIA_API_KEY", ""
+            ).strip()
+        if not key:
+            raise ValueError(
+                "llm_complete requires OPENAI_API_KEY / NVIDIA_API_KEY or openai_api_key="
+            )
+        sink = None
+        if llm_stream is True:
+            out = llm_stream_to or sys.stderr
+
+            def sink(s: str) -> None:
+                out.write(s)
+                out.flush()
+
+        final = await run_analysis_completion(
+            prompt,
+            api_key=key,
+            model=openai_model,
+            base_url=openai_base_url,
+            top_p=openai_top_p,
+            max_tokens=openai_max_tokens,
+            extra_body=openai_extra_body,
+            stream=llm_stream,
+            stream_sink=sink,
+        )
+
     return LiteraturePhaseOutcome(
         topic=topic,
         session_id=session_id,
@@ -238,4 +290,5 @@ async def run_literature_phase(
         user_context=user_ctx,
         knowledge_context=know_ctx,
         analysis_prompt=prompt,
+        final_analysis=final,
     )
