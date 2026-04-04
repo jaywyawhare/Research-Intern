@@ -7,6 +7,7 @@ from .arxiv_literature import (
 )
 from .context_builder import build_context_string
 from .hydra_research_bridge import HydraResearchBridge
+from .llm_completion import run_analysis_completion
 from .open_http_literature import (
     fetch_crossref_records,
     fetch_europepmc_records,
@@ -27,6 +28,7 @@ from .workflow import LiteraturePhaseOutcome, build_research_intern_analysis_pro
 
 __all__ = [
     "HydraResearchBridge",
+    "run_analysis_completion",
     "build_analysis_prompt",
     "build_thinking_protocol_prompt",
     "build_context_string",
