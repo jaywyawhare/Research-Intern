@@ -16,6 +16,9 @@ RUN npm run build
 FROM python:3.12-slim-bookworm AS runtime
 WORKDIR /app
 
+# Next standalone runs `node server.js`; the Python image does not include Node.
+COPY --from=node:20-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+
 RUN apt-get update \
   && apt-get install -y --no-install-recommends curl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
