@@ -15,13 +15,15 @@ Code does **not** call an LLM for you: it collects evidence, hydrates HydraDB, a
 
 ## Setup and tests
 
-Install dependencies from the repo root (includes optional SQLite for persistent sessions):
+Install dependencies from the repo root:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Run tests (in-memory sessions do not require `aiosqlite`; the SQLite store test is skipped if it is missing):
+Persistent sessions use **MongoDB** (`MONGODB_URI` in `.env`). Without it, the API keeps sessions in memory only.
+
+Run tests:
 
 ```bash
 pytest
