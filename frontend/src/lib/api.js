@@ -1,0 +1,73 @@
+const base = () => '';
+
+function headers(init) {
+  const h = new Headers(init);
+  h.set('Content-Type', 'application/json');
+  const key = process.env.NEXT_PUBLIC_RESEARCH_API_KEY;
+  if (key) {
+    h.set('X-API-Key', key);
+  }
+  return h;
+}
+
+function apiErrorMessage(status, body) {
+  const t = (body || '').trim();
+  const proxyOrDown =
+    status >= 502 ||
+    (status === 500 &&
+      (!t ||
+        t.startsWith('<!DOCTYPE') ||
+        t.startsWith('<html') ||
+        /failed to proxy/i.test(t) ||
+        /ECONNREFUSED/i.test(t)));
+  if (proxyOrDown) {
+    return 'Cannot reach the API. Start the FastAPI server (default http://127.0.0.1:8000) or set RESEARCH_API_URL in frontend/.env.local.';
+  }
+  return t || `HTTP ${status}`;
+}
+
+function formatHttpError(status, bodyText) {
+  const t = (bodyText || '').trim();
+  if (t.startsWith('{') && t.includes('"detail"')) {
+    try {
+      const j = JSON.parse(t);
+      const d = j?.detail;
+      if (typeof d === 'string') return d;
+      if (Array.isArray(d) && d.length && typeof d[0]?.msg === 'string') {
+        return d.map((x) => x.msg).join('; ');
+      }
+    } catch {
+    }
+  }
+  return apiErrorMessage(status, t);
+}
+
+async function throwIfNotOk(r) {
+  if (r.ok) return;
+  const t = await r.text();
+  throw new Error(formatHttpError(r.status, t));
+}
+
+export async function apiGet(path) {
+  const r = await fetch(`${base()}${path}`, { headers: headers() });
+  await throwIfNotOk(r);
+  return r.json();
+}
+
+export async function apiPost(path, body) {
+  const r = await fetch(`${base()}${path}`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(body),
+  });
+  await throwIfNotOk(r);
+  return r.json();
+}
+
+export async function apiDelete(path) {
+  const r = await fetch(`${base()}${path}`, {
+    method: 'DELETE',
+    headers: headers(),
+  });
+  await throwIfNotOk(r);
+}

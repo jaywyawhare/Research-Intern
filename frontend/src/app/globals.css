@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Instrument+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #faf7f2;
+    --foreground: #292524;
+    --card: #fffdf9;
+    --card-foreground: #292524;
+    --primary: #92400e;
+    --primary-foreground: #fffbeb;
+    --secondary: #f5f0e8;
+    --secondary-foreground: #44403c;
+    --muted: #f5f0e8;
+    --muted-foreground: #57534e;
+    --accent: #fffbeb;
+    --accent-foreground: #78350f;
+    --destructive: #991b1b;
+    --destructive-foreground: #fef2f2;
+    --success: #166534;
+    --success-foreground: #f0fdf4;
+    --border: #e7e0d5;
+    --input: #d6d3d1;
+    --ring: #92400e;
+    --radius: 0.5rem;
+    --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-mono: 'Fira Code', Consolas, monospace;
+    --surface-0: #faf7f2;
+    --surface-1: #f3ede3;
+    --surface-2: #ede8de;
+    --surface-3: #e7e0d5;
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    background-color: var(--background);
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    letter-spacing: -0.011em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .stagger-fade-in > * {
+    animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .stagger-fade-in > *:nth-child(1) {
+    animation-delay: 0s;
+  }
+  .stagger-fade-in > *:nth-child(2) {
+    animation-delay: 0.08s;
+  }
+  .stagger-fade-in > *:nth-child(3) {
+    animation-delay: 0.16s;
+  }
+}
+
+::selection {
+  background: rgba(146, 64, 14, 0.2);
+}
