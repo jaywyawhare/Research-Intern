@@ -216,6 +216,32 @@ export function KnowledgeGraphFlow({
       ctx.lineWidth = Math.max(1, 1.3 / globalScale);
       ctx.stroke();
       ctx.restore();
+
+      // Draw label: always for selected, otherwise when zoomed in enough
+      const showLabel = selected || globalScale >= 1.4;
+      if (showLabel) {
+        const label = node.label || node.id;
+        const truncated = label.length > 28 ? `${label.slice(0, 26)}…` : label;
+        const fontSize = selected
+          ? Math.max(10, Math.min(13, 11 / globalScale * 1.6))
+          : Math.max(9, Math.min(12, 10 / globalScale * 1.5));
+        ctx.save();
+        ctx.font = `${selected ? 600 : 400} ${fontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const textY = y + r + 3 / globalScale;
+        const textWidth = ctx.measureText(truncated).width;
+        // Background pill
+        const pad = 2 / globalScale;
+        ctx.fillStyle = selected ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.80)';
+        ctx.beginPath();
+        ctx.roundRect(x - textWidth / 2 - pad, textY - pad, textWidth + pad * 2, fontSize + pad * 2, 2 / globalScale);
+        ctx.fill();
+        // Text
+        ctx.fillStyle = selected ? '#1a1a2e' : '#374151';
+        ctx.fillText(truncated, x, textY);
+        ctx.restore();
+      }
     },
     [selectedNodeId]
   );
