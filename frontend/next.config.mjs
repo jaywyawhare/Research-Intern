@@ -19,12 +19,14 @@ function devAllowedOriginHosts() {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   outputFileTracingRoot: path.join(__dirname, '..'),
   serverExternalPackages: ['tailwind-merge'],
   allowedDevOrigins: devAllowedOriginHosts(),
   async rewrites() {
     const b = backendUrl();
     return [
+      { source: '/health', destination: `${b}/health` },
       { source: '/v1/:path*', destination: `${b}/v1/:path*` },
       { source: '/docs', destination: `${b}/docs` },
       { source: '/openapi.json', destination: `${b}/openapi.json` },
