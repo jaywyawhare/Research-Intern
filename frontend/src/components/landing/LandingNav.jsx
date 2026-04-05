@@ -13,9 +13,9 @@ export function LandingNav() {
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/15 text-primary">
               <BookOpen className="h-4 w-4" strokeWidth={2} />
             </div>
-            <div className="flex items-baseline">
-              <span className="font-display text-[15px] text-foreground">research</span>
-              <span className="font-display text-[15px] text-primary">.intern</span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-[15px] text-foreground">AI</span>
+              <span className="font-display text-[15px] text-primary">Researcher</span>
             </div>
           </Link>
 
