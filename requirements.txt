@@ -3,5 +3,5 @@ httpx>=0.24
 certifi>=2024.0.0
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
-aiosqlite>=0.20.0
+motor>=3.5.0
 pytest>=8.0.0
