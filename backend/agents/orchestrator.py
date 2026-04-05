@@ -5,7 +5,8 @@ from typing import Any
 
 from ..context_util import session_retrieval_context
 from ..schemas import AgentInvocation, MultiAgentTurnResponse
-from ..session_store import ResearchSessionRecord, store
+from .. import session_store
+from ..session_store import ResearchSessionRecord
 from .handlers import HANDLERS, run_auditor as auditor_agent
 from .router import _tail_transcript, plan_agent_pipeline
 from .types import AgentContext, AgentStepResult
@@ -34,7 +35,9 @@ async def run_multi_agent_turn(
     if rec.outcome is None:
         raise RuntimeError("session outcome missing")
 
-    await store.append_transcript(session_id, _transcript_entry(role="user", content=user_message))
+    await session_store.store.append_transcript(
+        session_id, _transcript_entry(role="user", content=user_message)
+    )
 
     retrieved, source = await session_retrieval_context(rec, session_id, user_message)
     tail = _tail_transcript(rec.transcript)
@@ -64,7 +67,7 @@ async def run_multi_agent_turn(
             continue
         result = await handler(ctx)
         steps.append(result)
-        await store.append_transcript(
+        await session_store.store.append_transcript(
             session_id,
             _transcript_entry(role="assistant", content=result.content, agent=result.agent_id),
         )
@@ -72,7 +75,7 @@ async def run_multi_agent_turn(
     if not steps:
         fallback = await HANDLERS["interlocutor"](ctx)
         steps.append(fallback)
-        await store.append_transcript(
+        await session_store.store.append_transcript(
             session_id,
             _transcript_entry(
                 role="assistant", content=fallback.content, agent=fallback.agent_id
@@ -83,7 +86,7 @@ async def run_multi_agent_turn(
     if run_auditor and last_answer:
         audit = await auditor_agent(ctx, last_answer)
         steps.append(audit)
-        await store.append_transcript(
+        await session_store.store.append_transcript(
             session_id,
             _transcript_entry(role="assistant", content=audit.content, agent=audit.agent_id),
         )

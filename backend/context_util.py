@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from core.knowledge_graph_view import format_knowledge_graph_for_prompt
+
 from .session_store import ResearchSessionRecord
 
 logger = logging.getLogger(__name__)
@@ -19,6 +21,9 @@ def build_local_context(outcome: dict[str, Any], *, max_chars: int = 80_000) -> 
         parts.append("## Gathered user context\n" + uc.strip()[:20_000])
     if isinstance(kc, str) and kc.strip():
         parts.append("## Gathered knowledge context\n" + kc.strip()[:20_000])
+    kg_text = format_knowledge_graph_for_prompt(outcome.get("knowledge_graph"))
+    if kg_text:
+        parts.append(kg_text)
     parts.append("## Corpus item summaries")
     for p in (outcome.get("papers") or [])[:60]:
         if not isinstance(p, dict):
@@ -52,6 +57,9 @@ async def session_retrieval_context(
             u = (ctx.get("user_context") or "").strip()
             k = (ctx.get("knowledge_context") or "").strip()
             context = "\n\n".join(x for x in (u, k) if x)
+            kg_text = format_knowledge_graph_for_prompt(rec.outcome.get("knowledge_graph"))
+            if kg_text:
+                context = f"{context}\n\n{kg_text}" if context else kg_text
             source = "hydra_recall"
         except Exception as e:
             logger.warning("Hydra recall failed; using local corpus: %s", e)

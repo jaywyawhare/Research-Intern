@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable
 
 from core.llm_completion import run_analysis_completion
 
@@ -20,16 +20,30 @@ async def run_librarian(ctx: AgentContext) -> AgentStepResult:
     arxiv_q = outcome.get("arxiv_search_query") or ""
     papers = outcome.get("papers") or []
     titles = [str(p.get("title", ""))[:120] for p in papers[:40] if isinstance(p, dict)]
-    pack = json.dumps(
-        {
-            "arxiv_search_query": arxiv_q,
-            "corpus_stats": stats,
-            "extra_source_summary": extras,
-            "sample_titles": titles,
-            "paper_count": len(papers),
-        },
-        indent=2,
-    )[:25_000]
+    pack_obj: dict[str, Any] = {
+        "arxiv_search_query": arxiv_q,
+        "corpus_stats": stats,
+        "extra_source_summary": extras,
+        "sample_titles": titles,
+        "paper_count": len(papers),
+    }
+    kg = outcome.get("knowledge_graph")
+    if isinstance(kg, dict):
+        kst = kg.get("stats") if isinstance(kg.get("stats"), dict) else {}
+        if int(kst.get("edge_count", 0) or 0) > 0 or int(kst.get("node_count", 0) or 0) > 0:
+            pack_obj["knowledge_graph"] = {
+                "stats": kst,
+                "relations": [
+                    {
+                        "source": str(e.get("source_label") or "")[:200],
+                        "predicate": str(e.get("predicate") or "")[:160],
+                        "target": str(e.get("target_label") or "")[:200],
+                    }
+                    for e in (kg.get("edges") or [])[:50]
+                    if isinstance(e, dict)
+                ],
+            }
+    pack = json.dumps(pack_obj, indent=2)[:25_000]
     try:
         prompt = (
             f'You are the **librarian** agent for a session on "{ctx.topic}".\n'

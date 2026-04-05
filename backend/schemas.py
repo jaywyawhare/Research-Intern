@@ -19,6 +19,8 @@ def literature_outcome_to_store(o: LiteraturePhaseOutcome) -> dict[str, Any]:
         "knowledge_context": o.knowledge_context,
         "analysis_prompt": o.analysis_prompt,
         "final_analysis": o.final_analysis,
+        "knowledge_graph": o.knowledge_graph,
+        "synthesis_history": [],
         "papers": [
             {
                 "arxiv_id": p.arxiv_id,
@@ -34,6 +36,13 @@ def literature_outcome_to_store(o: LiteraturePhaseOutcome) -> dict[str, Any]:
             for p in o.papers
         ],
     }
+
+
+class SynthesisHistoryEntry(BaseModel):
+    """Older synthesis runs after regenerate (newest previous first)."""
+
+    ts: float
+    text: str
 
 
 class PaperOut(BaseModel):
@@ -94,6 +103,15 @@ class ResearchRunResponse(BaseModel):
     knowledge_context: str
     analysis_prompt: str | None = None
     final_analysis: str | None = None
+    knowledge_graph: dict[str, Any] | None = None
+    synthesis_history: list[SynthesisHistoryEntry] = Field(
+        default_factory=list,
+        description="Prior syntheses after re-run (newest previous first).",
+    )
+    synthesis_error: str | None = Field(
+        default=None,
+        description="Last LLM error during regeneration, if any (cleared on success).",
+    )
     papers: list[PaperOut] | None = None
 
 
@@ -106,6 +124,17 @@ def stored_outcome_to_response(
     papers: list[PaperOut] | None = None
     if include_papers:
         papers = [PaperOut.model_validate(p) for p in d.get("papers") or []]
+    hist_raw = d.get("synthesis_history") or []
+    synthesis_history: list[SynthesisHistoryEntry] = []
+    for item in hist_raw:
+        if isinstance(item, dict) and "ts" in item and "text" in item:
+            try:
+                synthesis_history.append(
+                    SynthesisHistoryEntry(ts=float(item["ts"]), text=str(item["text"]))
+                )
+            except (TypeError, ValueError):
+                continue
+
     return ResearchRunResponse(
         topic=d["topic"],
         session_id=d["session_id"],
@@ -116,6 +145,9 @@ def stored_outcome_to_response(
         knowledge_context=d.get("knowledge_context") or "",
         analysis_prompt=d.get("analysis_prompt") if include_analysis_prompt else None,
         final_analysis=d.get("final_analysis"),
+        knowledge_graph=d.get("knowledge_graph"),
+        synthesis_history=synthesis_history,
+        synthesis_error=d.get("synthesis_error"),
         papers=papers,
     )
 
@@ -221,6 +253,61 @@ class SessionAskResponse(BaseModel):
     )
 
 
+class RegenerateGraphRequest(BaseModel):
+    run_llm_analysis: bool = Field(
+        default=True,
+        description=(
+            "Defaults to true: after refreshing recall/graph data, run LLM synthesis. "
+            "Set to false only for a graph-only refresh (no API call, no final_analysis update)."
+        ),
+    )
+
+
+class RegenerateGraphResponse(BaseModel):
+    session_id: str
+    topic: str
+    knowledge_graph: dict[str, Any] | None = None
+    status: str
+
+
+class AddSourceRequest(BaseModel):
+    title: str = Field(..., min_length=1)
+    body_md: str = Field(..., min_length=1, description="Markdown content of the source.")
+    source_url: str | None = Field(default=None)
+    extra_metadata: dict[str, Any] | None = Field(default=None)
+
+
+class AddSourceResponse(BaseModel):
+    session_id: str
+    source_title: str
+    knowledge_graph: dict[str, Any] | None = None
+    papers_count: int
+    status: str = "processing"
+
+
+class ArxivBeamExtendRequest(BaseModel):
+    """Expand the session corpus via multi-query arXiv search (topic seed, then title-derived phrases)."""
+
+    beam_width: int = Field(default=5, ge=1, le=25, description="Papers per query wave; caps title-derived queries.")
+    depth: int = Field(default=2, ge=1, le=5, description="Number of waves (1 = topic query only).")
+    max_new_papers: int = Field(default=20, ge=1, le=100)
+    restrict_arxiv_cs_stat_ml: bool = Field(
+        default=True,
+        description="If true, limit arXiv results to cs.CL / cs.AI / cs.LG / stat.ML (same as initial session).",
+    )
+    raw_arxiv_query: bool = Field(
+        default=False,
+        description="If true, treat the session topic as a raw arXiv search_query string.",
+    )
+
+
+class ArxivBeamExtendResponse(BaseModel):
+    session_id: str
+    topic: str
+    max_new_papers_requested: int
+    status: str = "processing"
+
+
 def _paper_out(p: PaperRecord) -> PaperOut:
     return PaperOut(
         arxiv_id=p.arxiv_id,
@@ -254,5 +341,7 @@ def outcome_to_response(
         knowledge_context=o.knowledge_context,
         analysis_prompt=o.analysis_prompt if include_analysis_prompt else None,
         final_analysis=o.final_analysis,
+        knowledge_graph=o.knowledge_graph,
+        synthesis_history=[],
         papers=papers,
     )
