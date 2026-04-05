@@ -20,6 +20,7 @@ function devAllowedOriginHosts() {
 const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, '..'),
+  serverExternalPackages: ['tailwind-merge'],
   allowedDevOrigins: devAllowedOriginHosts(),
   async rewrites() {
     const b = backendUrl();

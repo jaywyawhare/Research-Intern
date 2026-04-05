@@ -1,9 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Bot, Database, LibraryBig } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { AnimatedResearchCard } from './AnimatedResearchCard';
+import { FeatureCardStack } from './FeatureCardStack';
 
 export function LandingHero() {
   return (
@@ -25,7 +26,7 @@ export function LandingHero() {
       />
 
       <div className="relative mx-auto max-w-[1320px] px-6 lg:px-10">
-        <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,min(100%,520px))] lg:gap-10 xl:gap-14">
+        <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,min(100%,480px))] lg:gap-10 xl:gap-16">
           <div className="max-w-2xl animate-fade-up">
             <div className="mb-8 inline-flex items-center gap-2.5 rounded-full border border-border bg-surface-1 px-3.5 py-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-success" />
@@ -51,7 +52,11 @@ export function LandingHero() {
             </p>
 
             <div className="mt-10 flex flex-wrap items-center gap-4">
-              <Button size="lg" className="gap-2 font-semibold" asChild>
+              <Button
+                size="lg"
+                className="gap-2 font-semibold transition-transform duration-200 hover:-translate-y-0.5 hover:skew-x-[-1deg] active:translate-y-0"
+                asChild
+              >
                 <Link href="/research">
                   Start a session
                   <ArrowRight className="h-4 w-4" />
@@ -60,84 +65,17 @@ export function LandingHero() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
-            <div
-              className="pointer-events-none absolute -inset-6 -z-10 rounded-[3rem] opacity-80 blur-3xl sm:-inset-8"
-              style={{
-                background:
-                  'radial-gradient(ellipse 72% 65% at 58% 42%, oklch(0.82 0.1 62 / 0.45), transparent 68%)',
-              }}
-              aria-hidden
-            />
-            <div
-              className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] sm:rounded-[2rem]
-                [mask-image:radial-gradient(ellipse_90%_88%_at_56%_48%,#000_52%,transparent_100%)]
-                [-webkit-mask-image:radial-gradient(ellipse_90%_88%_at_56%_48%,#000_52%,transparent_100%)]"
-            >
-              <Image
-                src="/hero.webp"
-                alt="AI Researcher hero"
-                fill
-                className="scale-[1.04] object-cover object-center"
-                sizes="(max-width: 1024px) 100vw, 520px"
-                priority
-              />
-              <div
-                className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-background/55"
-                aria-hidden
-              />
-              <div
-                className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/35 via-transparent to-background/40"
-                aria-hidden
-              />
-            </div>
+          <div className="relative mx-auto w-full lg:mx-0 animate-fade-up" style={{ animationDelay: '0.15s' }}>
+            <AnimatedResearchCard />
           </div>
         </div>
 
-        <ul className="mt-14 grid gap-4 sm:grid-cols-3 stagger-fade-in">
-          <li className="flex gap-4 rounded-lg border border-border bg-card/80 p-4">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-              aria-hidden
-            >
-              <LibraryBig className="h-5 w-5" strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">Rich sources</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Preprints, encyclopedia entries, and citation data, pulled together for your topic
-              </p>
-            </div>
-          </li>
-          <li className="flex gap-4 rounded-lg border border-border bg-card/80 p-4">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-              aria-hidden
-            >
-              <Database className="h-5 w-5" strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">Saved workspaces</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Your topic and sources stay put; the UI updates as the run progresses
-              </p>
-            </div>
-          </li>
-          <li className="flex gap-4 rounded-lg border border-border bg-card/80 p-4">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-              aria-hidden
-            >
-              <Bot className="h-5 w-5" strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">Specialist assistants</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Different experts weigh in on each turn, with an optional quality pass when enabled
-              </p>
-            </div>
-          </li>
-        </ul>
+        <div className="mt-20 stagger-fade-in">
+          <p className="mb-8 text-center font-mono text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+            Everything in one workflow
+          </p>
+          <FeatureCardStack />
+        </div>
       </div>
     </section>
   );

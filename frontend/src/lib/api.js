@@ -49,7 +49,10 @@ async function throwIfNotOk(r) {
 }
 
 export async function apiGet(path) {
-  const r = await fetch(`${base()}${path}`, { headers: headers() });
+  const r = await fetch(`${base()}${path}`, {
+    headers: headers(),
+    cache: 'no-store',
+  });
   await throwIfNotOk(r);
   return r.json();
 }

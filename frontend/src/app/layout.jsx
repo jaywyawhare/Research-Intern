@@ -1,4 +1,5 @@
 import './globals.css';
+import { ToastProvider } from '@/components/Toast';
 
 export const metadata = {
   title: 'AI Researcher',
@@ -8,7 +9,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

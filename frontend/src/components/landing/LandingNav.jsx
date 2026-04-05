@@ -9,7 +9,10 @@ export function LandingNav() {
     <header className="fixed top-0 z-50 w-full border-b border-border/40 bg-background/70 backdrop-blur-xl">
       <nav className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 transition-transform duration-200 hover:skew-x-[-1deg]"
+          >
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/15 text-primary">
               <BookOpen className="h-4 w-4" strokeWidth={2} />
             </div>
@@ -20,7 +23,11 @@ export function LandingNav() {
           </Link>
 
           <div className="flex items-center gap-3">
-            <Button size="sm" className="h-8 rounded-md px-3.5 text-[13px] font-semibold" asChild>
+            <Button
+              size="sm"
+              className="h-8 rounded-md px-3.5 text-[13px] font-semibold transition-transform duration-200 hover:-translate-y-0.5 hover:skew-x-[-1deg] active:translate-y-0"
+              asChild
+            >
               <Link href="/research">Workspace</Link>
             </Button>
           </div>
