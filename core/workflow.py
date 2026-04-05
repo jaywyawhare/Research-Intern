@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import os
+import re
 import sys
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Mapping
@@ -30,6 +32,90 @@ logger = logging.getLogger(__name__)
 build_research_intern_analysis_prompt = build_analysis_prompt
 
 
+def _normalize_title(title: str) -> str:
+    """Lowercase, strip punctuation/extra whitespace for fuzzy title matching."""
+    t = title.lower().strip()
+    t = re.sub(r'[^a-z0-9\s]', '', t)
+    t = re.sub(r'\s+', ' ', t)
+    return t
+
+
+def _paper_dedup_keys(p: PaperRecord) -> list[str]:
+    """
+    Return all canonical dedup keys for a paper.
+
+    A paper can match via DOI, real arXiv ID, or normalized title hash.
+    Cross-source duplicates will share at least one key.
+    """
+    keys: list[str] = []
+
+    doi = getattr(p, 'doi', '') or ''
+    if doi.strip():
+        keys.append(f'doi:{doi.strip().lower()}')
+
+    aid = p.arxiv_id or ''
+    if aid.strip():
+        raw = aid.strip().lower()
+        is_real_arxiv = (
+            (raw.startswith('arxiv:') and '.' in raw)
+            or re.match(r'^\d{4}\.\d{4,5}$', raw) is not None
+            or re.match(r'^[a-z-]+/\d{7}$', raw) is not None
+        )
+        if is_real_arxiv:
+            keys.append(f'arxiv:{raw}' if not raw.startswith('arxiv:') else raw)
+
+    title_key = _normalize_title(p.title)
+    if title_key:
+        h = hashlib.md5(title_key.encode()).hexdigest()[:12]
+        keys.append(f'title:{h}')
+
+    if not keys:
+        keys.append(f'unknown:{p.abs_url or p.source}')
+
+    return keys
+
+
+def _paper_dedup_key(p: PaperRecord) -> str:
+    """Return the primary dedup key for a paper (first of _paper_dedup_keys)."""
+    return _paper_dedup_keys(p)[0]
+
+
+def _deduplicate_papers(papers: list[PaperRecord]) -> list[PaperRecord]:
+    """
+    Remove duplicate papers across sources.
+
+    Two papers are considered duplicates if they share ANY dedup key
+    (same DOI, same arXiv ID, or same normalized title hash).
+    Keeps the first occurrence (preferring earlier sources in the pipeline order).
+    """
+    seen_keys: dict[str, PaperRecord] = {}
+    kept: list[PaperRecord] = []
+    removed = 0
+
+    for p in papers:
+        keys = _paper_dedup_keys(p)
+        is_dup = False
+        for k in keys:
+            if k in seen_keys:
+                is_dup = True
+                removed += 1
+                logger.debug(
+                    "Dedup removed: %r (duplicate of %r via key=%s)",
+                    p.title[:80], seen_keys[k].title[:80], k,
+                )
+                break
+
+        if not is_dup:
+            for k in keys:
+                seen_keys[k] = p
+            kept.append(p)
+
+    if removed:
+        logger.info("Deduplicated papers: kept %d, removed %d duplicates", len(kept), removed)
+
+    return kept
+
+
 @dataclass(frozen=True)
 class LiteraturePhaseOutcome:
     topic: str
@@ -43,6 +129,7 @@ class LiteraturePhaseOutcome:
     analysis_prompt: str
     final_analysis: str | None = None
     knowledge_graph: dict[str, Any] | None = None
+    visited_sources: list[str] | None = None
 
 
 def paper_record_to_ingest_markdown(p: PaperRecord) -> str:
@@ -199,7 +286,8 @@ async def run_literature_phase(
         )
 
     arxiv_q = arxiv.search_query
-    ptuple = arxiv.papers + wiki + xref + oa + s2 + epmc + pubmed
+    all_papers = arxiv.papers + wiki + xref + oa + s2 + epmc + pubmed
+    ptuple = tuple(_deduplicate_papers(all_papers))
     stats = corpus_metrics(ptuple)
 
     extra_lines: list[str] = []
@@ -315,6 +403,8 @@ async def run_literature_phase(
             stream_sink=sink,
         )
 
+    visited_sources = [_paper_dedup_key(p) for p in ptuple]
+
     return LiteraturePhaseOutcome(
         topic=topic,
         session_id=session_id,
@@ -327,6 +417,7 @@ async def run_literature_phase(
         analysis_prompt=prompt,
         final_analysis=final,
         knowledge_graph=knowledge_graph,
+        visited_sources=visited_sources,
     )
 
 

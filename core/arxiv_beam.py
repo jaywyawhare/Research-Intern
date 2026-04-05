@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import re
 from typing import Any
 
@@ -69,6 +70,7 @@ async def arxiv_beam_expand(
     topic: str,
     *,
     existing_arxiv_ids: set[str],
+    visited_sources: set[str] | None = None,
     beam_width: int = 5,
     depth: int = 2,
     max_new_papers: int = 20,
@@ -95,6 +97,7 @@ async def arxiv_beam_expand(
     cap = max(1, min(max_new_papers, 100))
 
     seen: set[str] = set(existing_arxiv_ids)
+    source_keys: set[str] = set(visited_sources or set())
     collected: list[PaperRecord] = []
     queries_tried: list[str] = []
     tried_q: set[str] = set()
@@ -115,9 +118,32 @@ async def arxiv_beam_expand(
         )
         out: list[PaperRecord] = []
         for p in res.papers:
-            if p.arxiv_id in seen:
+            keys: list[str] = []
+            doi = getattr(p, 'doi', '') or ''
+            if doi.strip():
+                keys.append(f'doi:{doi.strip().lower()}')
+            aid = p.arxiv_id or ''
+            if aid.strip():
+                raw = aid.strip().lower()
+                is_real_arxiv = (
+                    (raw.startswith('arxiv:') and '.' in raw)
+                    or re.match(r'^\d{4}\.\d{4,5}$', raw) is not None
+                    or re.match(r'^[a-z-]+/\d{7}$', raw) is not None
+                )
+                if is_real_arxiv:
+                    keys.append(f'arxiv:{raw}' if not raw.startswith('arxiv:') else raw)
+            t = re.sub(r'[^a-z0-9\s]', '', p.title.lower().strip())
+            t = re.sub(r'\s+', ' ', t)
+            if t:
+                h = hashlib.md5(t.encode()).hexdigest()[:12]
+                keys.append(f'title:{h}')
+            if not keys:
+                keys.append(f'unknown:{p.abs_url or p.source}')
+
+            if any(k in source_keys for k in keys) or p.arxiv_id in seen:
                 continue
             seen.add(p.arxiv_id)
+            source_keys.update(keys)
             out.append(p)
             if len(collected) + len(out) >= cap:
                 break

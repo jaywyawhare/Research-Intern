@@ -20,6 +20,7 @@ def literature_outcome_to_store(o: LiteraturePhaseOutcome) -> dict[str, Any]:
         "analysis_prompt": o.analysis_prompt,
         "final_analysis": o.final_analysis,
         "knowledge_graph": o.knowledge_graph,
+        "visited_sources": o.visited_sources or [],
         "synthesis_history": [],
         "papers": [
             {
@@ -113,6 +114,10 @@ class ResearchRunResponse(BaseModel):
         description="Last LLM error during regeneration, if any (cleared on success).",
     )
     papers: list[PaperOut] | None = None
+    visited_sources: list[str] = Field(
+        default_factory=list,
+        description="Canonical dedup keys for all fetched sources (DOI, arXiv ID, or title hash).",
+    )
 
 
 def stored_outcome_to_response(
@@ -149,6 +154,7 @@ def stored_outcome_to_response(
         synthesis_history=synthesis_history,
         synthesis_error=d.get("synthesis_error"),
         papers=papers,
+        visited_sources=d.get("visited_sources") or [],
     )
 
 

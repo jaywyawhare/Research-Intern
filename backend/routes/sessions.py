@@ -424,6 +424,11 @@ async def extend_arxiv_beam(
         for p in existing_papers
         if isinstance(p, dict) and (p.get("arxiv_id") or "").strip()
     }
+    visited_sources = {
+        s
+        for s in (outcome.get("visited_sources") or [])
+        if isinstance(s, str) and s.strip()
+    }
 
     async def _beam_job() -> None:
         await session_store.store.patch(session_id, status="running", error=None)
@@ -432,6 +437,7 @@ async def extend_arxiv_beam(
                 new_papers, queries = await arxiv_beam_expand(
                     topic,
                     existing_arxiv_ids=existing_ids,
+                    visited_sources=visited_sources,
                     beam_width=body.beam_width,
                     depth=body.depth,
                     max_new_papers=body.max_new_papers,
@@ -444,6 +450,7 @@ async def extend_arxiv_beam(
                 raise RuntimeError("Hydra is not available")
             papers = list(existing_papers)
             ingest_pause = 0.35
+            new_source_keys: list[str] = []
             for i, p in enumerate(new_papers):
                 await b.ingest_markdown_source(
                     session_id=session_id,
@@ -459,6 +466,20 @@ async def extend_arxiv_beam(
                         "citation_count": p.citation_count,
                     },
                 )
+                doi = getattr(p, 'doi', '') or ''
+                if doi.strip():
+                    pk = f'doi:{doi.strip().lower()}'
+                elif p.arxiv_id:
+                    raw = p.arxiv_id.strip().lower()
+                    pk = f'arxiv:{raw}' if not raw.startswith('arxiv:') else raw
+                else:
+                    import re, hashlib
+                    t = re.sub(r'[^a-z0-9\s]', '', p.title.lower().strip())
+                    t = re.sub(r'\s+', ' ', t)
+                    h = hashlib.md5(t.encode()).hexdigest()[:12]
+                    pk = f'title:{h}' if t else f'unknown:{p.abs_url or p.source}'
+                new_source_keys.append(pk)
+
                 papers.append(paper_record_to_store_dict(p))
                 if ingest_pause > 0 and i < len(new_papers) - 1:
                     await asyncio.sleep(ingest_pause)
@@ -468,6 +489,8 @@ async def extend_arxiv_beam(
             cur_out = dict(current.outcome or {})
             cur_out["papers"] = papers
             cur_out["corpus_stats"] = stats
+            existing_vs = list(cur_out.get("visited_sources") or [])
+            cur_out["visited_sources"] = existing_vs + new_source_keys
             prev_q = str(cur_out.get("arxiv_search_query") or "")
             suffix = f" · arXiv beam ({len(queries)} queries, +{len(new_papers)} papers)"
             cur_out["arxiv_search_query"] = (prev_q + suffix) if prev_q else f"{topic}{suffix}"
