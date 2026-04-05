@@ -41,8 +41,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Research API",
     description=(
-        "Stateful research sessions with **multi-agent** turns (router + librarian / scholar / "
-        "interlocutor, optional auditor), Hydra-scoped memory, direct Q&A, and one-shot "
+        "Stateful research sessions with **multi-agent** turns (router and specialists, optional "
+        "auditor), Hydra-scoped memory, direct Q&A, and one-shot "
         "``/v1/research/run`` via ``core``."
     ),
     version="0.1.0",
