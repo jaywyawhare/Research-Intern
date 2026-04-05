@@ -1,30 +1,62 @@
 # AI Researcher
 
-**AI Researcher** is a workflow for serious literature review: the user submits a **research topic**, the system pulls **recent arXiv papers**, stores them in **HydraDB** for recall and graph context, then drives a **thinking-style analysis** to surface **conflicts**, **gaps**, **hypotheses**, and **actionable ideas**.
+Stateful literature-research workspaces: ingest papers (arXiv and other sources), optional **HydraDB** memory and knowledge graph, OpenAI-compatible **LLM synthesis**, and a **Next.js** UI backed by a **FastAPI** service.
 
-## What the user gets
+---
 
-1. **Topic in**: Natural-language query (used as the arXiv `all:` search and as the Hydra recall query).
-2. **Literature collected**: Recent papers (default up to 30) from the [arXiv Atom API](https://info.arxiv.org/help/api/user-manual.html), newest first.
-3. **Memory + knowledge**: HydraDB **recall_preferences** (past sessions, preferences, traces) and **full_recall** (ingested sources + optional **graph** context) prime the analysis.
-4. **Ingestion**: Each abstract is uploaded as markdown **knowledge** so later turns retrieve overlapping work automatically.
-5. **Conflict & gap pass**: A structured **analysis prompt** asks your LLM to compare abstracts explicitly: contradictions, robust agreement, gaps, **testable hypotheses**, and **next-step ideas** (not a black-box summary).
-6. **Thinking engine (optional)**: You can mirror an explicit chain-of-thought by calling `save_thinking_step` (hypothesis / verification flags) as the model steps through the prompt, then `save_session_synthesis` for the final brief.
+## Architecture
 
-Code does **not** call an LLM for you: it collects evidence, hydrates HydraDB, and hands you a **prompt** (or you wire your own model and persist outputs).
+| Layer | Role |
+|--------|------|
+| **Frontend** (`frontend/`) | Next.js 15 (App Router). Browser calls same-origin `/v1/*`; Next rewrites to the API. |
+| **Backend** (`backend/`) | FastAPI: sessions, agent turns, one-shot `/v1/research/run`. |
+| **Core** (`core/`) | Literature fetch, workflow, LLM completion, Hydra bridge. |
+| **Data** | **MongoDB** for durable sessions when `MONGODB_URI` is set; otherwise in-memory (lost on restart). |
 
-## Setup and tests
+Local development runs **uvicorn** and **next dev** side by side. Production can use the **Dockerfile** at the repo root to run both processes in one container (e.g. Render).
 
-Install dependencies from the repo root:
+---
 
-```bash
-pip install -r requirements.txt
-```
+## Requirements
 
-Persistent sessions use **MongoDB** (`MONGODB_URI` in `.env`). Without it, the API keeps sessions in memory only.
+- **Python** 3.12+ (project targets 3.12; see `requirements.txt`)
+- **Node** 20+ (for the frontend)
+- **MongoDB** optional but recommended for persistence (Atlas works; TLS uses certifi in code)
 
-Run tests:
+---
 
-```bash
-pytest
-```
+## Quick start (local)
+
+1. Clone and install Python deps from the **repository root**:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Copy env template and fill in secrets (never commit `.env`):
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   At minimum for full functionality: an OpenAI-compatible key (`OPENAI_API_KEY` or `NVIDIA_API_KEY`), model/base URL as needed, and Hydra credentials if you use cloud memory (`HYDRADB_*`). See `.env.example` for the full list.
+
+3. Frontend env (optional; defaults work for local):
+
+   ```bash
+   cp frontend/.env.example frontend/.env
+   ```
+
+   `RESEARCH_API_URL=http://127.0.0.1:8000` lets Next proxy `/v1` to the local API. Do **not** point `NEXT_PUBLIC_*` at `127.0.0.1:8000`—that is for the server-side rewrite only.
+
+4. Run API + UI together:
+
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+   Or separately: `npm run dev:api` and `npm run dev:web`.
+
+- API: `http://127.0.0.1:8000` (see `BACKEND_HOST` / `BACKEND_PORT` in `.env`)
+- UI: `http://127.0.0.1:3000`
