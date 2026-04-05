@@ -1,18 +1,21 @@
-// Calls stay same-origin; Next rewrites /v1 to FastAPI. Do not point NEXT_PUBLIC_* at 127.0.0.1:8000.
+// Same-origin only; Next rewrites /v1 to FastAPI. Do not set NEXT_PUBLIC_* to 127.0.0.1:8000.
 function normalizePath(path) {
   let s = typeof path === 'string' ? path.trim() : String(path);
   s = s.replace(/^https?:\/\/127\.0\.0\.1:8000/i, '');
+  s = s.replace(/^\/\/127\.0\.0\.1:8000/i, '');
   s = s.replace(/^https?:\/\/localhost:8000/i, '');
+  s = s.replace(/^\/\/localhost:8000/i, '');
   if (!s.startsWith('/')) s = `/${s}`;
   return s;
 }
 
 function apiUrl(path) {
   const p = normalizePath(path);
-  if (typeof window !== 'undefined') {
-    return new URL(p, window.location.origin).href;
+  if (typeof window === 'undefined') {
+    return p;
   }
-  return p;
+  // Avoid `new URL('//127.0.0.1:8000/...', origin)` — that becomes https://127.0.0.1:8000/... in the browser.
+  return `${window.location.origin}${p}`;
 }
 
 function headers(init, { withJsonContentType = true } = {}) {
