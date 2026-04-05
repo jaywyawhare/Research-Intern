@@ -35,6 +35,15 @@ def _route_heuristic(message: str) -> tuple[list[str], str]:
             "landscape",
             "trends",
             "methodolog",
+            "hypothesis",
+            "hypotheses",
+            "experiment",
+            "experiments",
+            "study design",
+            "protocol",
+            "ablation",
+            "benchmark",
+            "evaluation design",
         )
     ):
         return ["scholar"], "heuristic: synthesis-style request"
@@ -99,7 +108,8 @@ async def plan_agent_pipeline(
             "You route user messages to specialist agents for a research session.\n\n"
             "Agents (use lowercase ids only):\n"
             "- librarian: corpus inventory (counts, sources, gaps, what was gathered).\n"
-            "- scholar: thematic synthesis (trends, methods, big-picture narrative across papers).\n"
+            "- scholar: thematic synthesis, hypotheses, and experiment or study-design reasoning across the "
+            "evidence (trends, methods, disagreements, what to test next conceptually).\n"
             "- interlocutor: targeted Q&A (specific factual or analytical questions).\n\n"
             "Rules:\n"
             "- Return JSON only, no markdown.\n"

@@ -63,7 +63,8 @@ async def run_scholar(ctx: AgentContext) -> AgentStepResult:
             "### Evidence\n"
             f"{ctx.retrieved_context[:70_000]}\n\n"
             "Produce a structured synthesis: themes, methods, disagreements, and open questions. "
-            "Ground claims in the evidence; flag uncertainty."
+            "If relevant, refine or extend **hypotheses** and **experiment proposals** (conceptual study "
+            "design only; no code or execution). Ground claims in the evidence; flag uncertainty."
         )
         text = await run_analysis_completion(prompt, stream=False, temperature=0.4)
     except (ValueError, RuntimeError) as e:
