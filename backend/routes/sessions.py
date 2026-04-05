@@ -120,7 +120,7 @@ async def _run_session_job(session_id: str, body: SessionCreateRequest) -> None:
         await session_store.store.patch(session_id, status="error", error=format_stored_session_error(e))
 
 
-@router.post("/", response_model=SessionCreatedResponse)
+@router.post("", response_model=SessionCreatedResponse)
 async def create_session(
     body: SessionCreateRequest,
     background_tasks: BackgroundTasks,
@@ -138,7 +138,7 @@ async def create_session(
     )
 
 
-@router.get("/", response_model=list[SessionSummary])
+@router.get("", response_model=list[SessionSummary])
 async def list_sessions() -> list[SessionSummary]:
     rows = await session_store.store.list_summaries()
     return [_summary(r) for r in rows]
