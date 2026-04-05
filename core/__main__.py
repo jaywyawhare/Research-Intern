@@ -15,7 +15,7 @@ from .workflow import run_literature_phase
 async def _async_main(argv: list[str] | None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Research Intern: gather corpus + optional Hydra, then run OpenAI-compatible analysis "
+            "AI Researcher: gather corpus + optional Hydra, then run OpenAI-compatible analysis "
             "(stdout is the model answer by default; use --prompt-only for the raw prompt)."
         ),
     )

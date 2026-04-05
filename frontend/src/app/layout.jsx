@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Research Intern',
-  description: 'Literature sessions, Hydra memory, multi-agent research',
+  title: 'AI Researcher',
+  description: 'Literature-backed research workspaces, synthesis, and collaborative AI assistance',
 };
 
 export default function RootLayout({ children }) {
