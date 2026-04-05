@@ -7,7 +7,7 @@ import { apiGet, apiPost } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { ActivityPanel } from '@/components/ActivityPanel';
 import { useToast } from '@/components/Toast';
-import { Loader2, RefreshCw, Plus, X, GitCommitVertical } from 'lucide-react';
+import { Loader2, RefreshCw, Plus, X, GitCommitVertical, Brain, BookOpen, Network } from 'lucide-react';
 
 function statusDotClass(status) {
   if (status === 'ready') return 'bg-success border-success/40';
@@ -22,11 +22,29 @@ function statusBadgeClass(status) {
   return 'bg-secondary text-secondary-foreground';
 }
 
+function statusAccentColor(status) {
+  if (status === 'ready') return 'var(--success)';
+  if (status === 'error') return 'var(--destructive)';
+  if (status === 'running' || status === 'pending') return 'var(--primary)';
+  return 'var(--surface-3)';
+}
+
 function GitTree({ sessions }) {
   if (sessions.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-surface-1/50 py-14 text-center text-sm text-muted-foreground">
-        No sessions yet — create your first workspace above.
+      <div
+        className="rounded-xl border border-dashed border-border py-16 text-center"
+        style={{ background: 'linear-gradient(145deg, var(--card), var(--surface-1))' }}
+      >
+        <p
+          className="font-display text-base"
+          style={{ color: 'var(--foreground)', opacity: 0.55 }}
+        >
+          No sessions yet
+        </p>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Create your first workspace above to begin.
+        </p>
       </div>
     );
   }
@@ -56,7 +74,14 @@ function GitTree({ sessions }) {
               <div className="mb-3 ml-3 flex-1 min-w-0">
                 <Link
                   href={`/research/${encodeURIComponent(s.session_id)}`}
-                  className="block rounded-lg border border-border bg-card p-3.5 transition-all duration-200 hover:bg-surface-1 hover:-translate-y-0.5 hover:skew-x-[-0.3deg] hover:shadow-sm"
+                  className="block rounded-lg border border-border bg-card transition-all duration-200 hover:bg-surface-1 hover:-translate-y-0.5 hover:shadow-sm"
+                  style={{
+                    padding: '0.875rem 0.875rem 0.875rem 0.75rem',
+                    borderLeftWidth: '3px',
+                    borderLeftStyle: 'solid',
+                    borderLeftColor: statusAccentColor(s.status),
+                    boxShadow: 'var(--shadow-xs)',
+                  }}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -70,7 +95,9 @@ function GitTree({ sessions }) {
                           : 'Cloud memory · off'}
                       </p>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass(s.status)}`}>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-0.5 font-mono text-[10px] font-semibold ${statusBadgeClass(s.status)}`}
+                    >
                       {s.status}
                     </span>
                   </div>
@@ -80,6 +107,85 @@ function GitTree({ sessions }) {
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+// ─── Memory flywheel stats panel ─────────────────────────────────────────────
+
+function MemoryStats({ sessions }) {
+  const memorySessions = sessions.filter((s) => s.use_hydra);
+  const connected = sessions.filter((s) => s.hydra_connected);
+  const completed = sessions.filter((s) => s.status === 'ready');
+
+  if (memorySessions.length === 0) return null;
+
+  const stats = [
+    { icon: Brain, value: connected.length, label: 'Memory sessions', sub: 'HydraDB connected' },
+    { icon: BookOpen, value: completed.length, label: 'Completed runs', sub: 'Knowledge ingested' },
+    { icon: Network, value: connected.length > 0 ? '↑' : '—', label: 'Compounding', sub: 'Across all sessions' },
+  ];
+
+  return (
+    <div
+      className="mb-8 rounded-xl border p-5"
+      style={{
+        background: 'linear-gradient(135deg, var(--card) 0%, var(--surface-1) 100%)',
+        borderColor: 'var(--border)',
+        boxShadow: 'var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.70)',
+        borderLeftWidth: '3px',
+        borderLeftColor: 'var(--primary)',
+      }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          {/* HydraDB wave mark */}
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none" style={{ color: 'var(--primary)' }}>
+            <path d="M1 9.5C3 5.5 5 3 8 3C11 3 13 5.5 15 9.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            <path d="M3.5 9.5C5 7 6.2 6 8 6C9.8 6 11 7 12.5 9.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.55"/>
+            <circle cx="8" cy="1.5" r="1.1" fill="currentColor" opacity="0.75"/>
+          </svg>
+          <p
+            className="font-mono text-[10.5px] font-medium uppercase tracking-[0.10em]"
+            style={{ color: 'var(--primary)' }}
+          >
+            HydraDB Knowledge Base
+          </p>
+        </div>
+        <span
+          className="flex items-center gap-1.5 font-mono text-[10px]"
+          style={{ color: 'var(--muted-foreground)' }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--success)' }} />
+          Active · Global
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {stats.map(({ icon: Icon, value, label, sub }) => (
+          <div key={label}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Icon className="h-3.5 w-3.5" style={{ color: 'var(--primary)', opacity: 0.7 }} />
+              <span
+                className="font-display text-2xl leading-none"
+                style={{ color: 'var(--foreground)' }}
+              >
+                {value}
+              </span>
+            </div>
+            <p className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{label}</p>
+            <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      <p
+        className="mt-4 pt-4 text-[11.5px] leading-relaxed border-t"
+        style={{ color: 'var(--muted-foreground)', borderColor: 'var(--border)' }}
+      >
+        Each session with memory ON ingests papers into a shared knowledge base.
+        Recall improves with every run — the agent draws from everything it has ever read.
+      </p>
     </div>
   );
 }
@@ -288,6 +394,9 @@ export default function ResearchSessionsPage() {
           </Button>
         </div>
 
+        {/* Memory flywheel stats */}
+        <MemoryStats sessions={sessions} />
+
         {/* Two-column when activity is active */}
         <div className="flex gap-6">
           {/* Left column */}
@@ -310,14 +419,25 @@ export default function ResearchSessionsPage() {
                 >
                   <button
                     onClick={() => setShowForm(true)}
-                    className="group flex w-full items-center gap-3 rounded-xl border border-dashed border-border bg-surface-1/60 px-5 py-4 text-left transition-all duration-200 hover:border-primary/40 hover:bg-surface-1 hover:-translate-y-0.5 hover:shadow-sm"
+                    className="group flex w-full items-center gap-3.5 rounded-xl border border-dashed border-border px-5 py-4 text-left transition-all duration-200 hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-sm"
+                    style={{
+                      background: 'linear-gradient(145deg, var(--card) 0%, var(--surface-1) 100%)',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.70)',
+                    }}
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-110">
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110"
+                      style={{
+                        background: 'var(--primary)',
+                        color: 'var(--primary-foreground)',
+                        boxShadow: '0 1px 5px rgba(124,45,18,0.32)',
+                      }}
+                    >
                       <Plus className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-foreground">Let&apos;s create a new workspace</p>
-                      <p className="text-xs text-muted-foreground">Enter a topic, pick your options, and start a research session</p>
+                      <p className="text-sm font-semibold text-foreground">New workspace</p>
+                      <p className="text-xs text-muted-foreground">Enter a topic, pick options, and start a session</p>
                     </div>
                   </button>
                 </motion.div>

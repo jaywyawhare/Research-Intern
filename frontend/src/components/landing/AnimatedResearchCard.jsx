@@ -32,10 +32,19 @@ export function AnimatedResearchCard() {
   return (
     <Link
       href="/research"
-      className="group relative block w-full max-w-sm cursor-pointer rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-lg lg:max-w-md"
+      className="group relative block w-full max-w-sm cursor-pointer rounded-2xl border border-border bg-card p-6 text-card-foreground transition-all duration-300 ease-in-out hover:-translate-y-1.5"
       aria-label="Start a research session"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      style={{
+        boxShadow: 'var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,0.80)',
+      }}
+      onMouseEnter={(e) => {
+        setHovered(true);
+        e.currentTarget.style.boxShadow = 'var(--shadow-xl), inset 0 1px 0 rgba(255,255,255,0.80)';
+      }}
+      onMouseLeave={(e) => {
+        setHovered(false);
+        e.currentTarget.style.boxShadow = 'var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,0.80)';
+      }}
     >
       <div className="mb-6 flex items-center justify-between">
         <h2 className="font-display text-2xl tracking-tight text-foreground">

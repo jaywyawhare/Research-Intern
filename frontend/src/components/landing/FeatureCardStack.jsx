@@ -110,7 +110,8 @@ export function FeatureCardStack() {
               return (
                 <motion.div
                   key={feat.id}
-                  className="absolute bottom-0 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm shadow-lg overflow-hidden cursor-pointer select-none"
+                  className="absolute bottom-0 rounded-2xl border border-border/60 bg-card/70 backdrop-blur-sm overflow-hidden cursor-pointer select-none"
+                  style={{ boxShadow: 'var(--shadow-lg)' }}
                   style={{
                     width: cardWidth,
                     height: 180,

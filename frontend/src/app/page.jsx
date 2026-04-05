@@ -1,5 +1,6 @@
 import { LandingNav } from '@/components/landing/LandingNav';
 import { LandingHero } from '@/components/landing/LandingHero';
+import { LandingMemoryLoop } from '@/components/landing/LandingMemoryLoop';
 
 export default function HomePage() {
   return (
@@ -7,6 +8,7 @@ export default function HomePage() {
       <LandingNav />
       <main>
         <LandingHero />
+        <LandingMemoryLoop />
       </main>
     </div>
   );

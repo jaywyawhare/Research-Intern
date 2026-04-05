@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Instrument+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
 
 @tailwind base;
@@ -7,45 +7,55 @@
 
 @layer base {
   :root {
-    --background: #faf7f2;
-    --foreground: #292524;
-    --card: #fffdf9;
-    --card-foreground: #292524;
-    --primary: #92400e;
-    --primary-foreground: #fffbeb;
-    --secondary: #f5f0e8;
+    --background: #faf8f3;
+    --foreground: #1c1917;
+    --card: #fffcf7;
+    --card-foreground: #1c1917;
+    --primary: #7c2d12;
+    --primary-foreground: #fef9f0;
+    --secondary: #f0e8db;
     --secondary-foreground: #44403c;
-    --muted: #f5f0e8;
-    --muted-foreground: #57534e;
-    --accent: #fffbeb;
+    --muted: #ece5d8;
+    --muted-foreground: #79726a;
+    --accent: #fdf0d8;
     --accent-foreground: #78350f;
     --destructive: #991b1b;
     --destructive-foreground: #fef2f2;
-    --success: #166534;
+    --success: #14532d;
     --success-foreground: #f0fdf4;
-    --border: #e7e0d5;
-    --input: #d6d3d1;
-    --ring: #92400e;
+    --border: #ddd5c3;
+    --input: #d0c8b6;
+    --ring: #7c2d12;
     --radius: 0.5rem;
+
     --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-display: 'DM Serif Display', Georgia, serif;
-    --font-mono: 'Fira Code', Consolas, monospace;
-    --surface-0: #faf7f2;
-    --surface-1: #f3ede3;
-    --surface-2: #ede8de;
-    --surface-3: #e7e0d5;
+    --font-mono: 'Fira Code', ui-monospace, Consolas, monospace;
+
+    --surface-0: #faf8f3;
+    --surface-1: #f0e8db;
+    --surface-2: #e5dccb;
+    --surface-3: #ddd5c3;
+
+    /* Warm shadow system — amber-tinted depths */
+    --shadow-xs:  0 1px 2px  rgba(28, 16, 8, 0.04);
+    --shadow-sm:  0 1px 4px  rgba(28, 16, 8, 0.07), 0 1px 2px  rgba(28, 16, 8, 0.04);
+    --shadow-md:  0 4px 12px rgba(28, 16, 8, 0.08), 0 2px 4px  rgba(28, 16, 8, 0.04);
+    --shadow-lg:  0 10px 28px rgba(28, 16, 8, 0.10), 0 4px 8px  rgba(28, 16, 8, 0.05);
+    --shadow-xl:  0 20px 48px rgba(28, 16, 8, 0.12), 0 8px 16px rgba(28, 16, 8, 0.06);
+    --shadow-2xl: 0 36px 72px rgba(28, 16, 8, 0.14), 0 16px 32px rgba(28, 16, 8, 0.07);
   }
 
-  *,
-  ::before,
-  ::after {
+  *, ::before, ::after {
     border-color: var(--border);
   }
 
   html {
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     background-color: var(--background);
+    scroll-behavior: smooth;
   }
 
   body {
@@ -53,48 +63,115 @@
     background-color: var(--background);
     color: var(--foreground);
     letter-spacing: -0.011em;
+    line-height: 1.6;
   }
 
-  h1,
-  h2,
-  h3,
-  h4 {
+  h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 400;
     letter-spacing: -0.02em;
+    line-height: 1.12;
+  }
+
+  /* ─── Scrollbar ─────────────────────────────────────── */
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--surface-3);
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
+  /* ─── Focus ring ────────────────────────────────────── */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: calc(var(--radius) - 1px);
   }
 }
 
 @layer utilities {
+  /* ─── Keyframes ─────────────────────────────────────── */
   @keyframes fadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0);    }
   }
 
-  .animate-fade-up {
-    animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 
-  .stagger-fade-in > * {
-    animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0);    }
   }
-  .stagger-fade-in > *:nth-child(1) {
-    animation-delay: 0s;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px);  }
+    50%       { transform: translateY(-7px); }
   }
-  .stagger-fade-in > *:nth-child(2) {
-    animation-delay: 0.08s;
+
+  @keyframes breathe {
+    0%, 100% { opacity: 0.32; transform: scale(1);    }
+    50%       { opacity: 0.60; transform: scale(1.04); }
   }
-  .stagger-fade-in > *:nth-child(3) {
-    animation-delay: 0.16s;
+
+  @keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position:  400px 0; }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  /* ─── Animation classes ─────────────────────────────── */
+  .animate-fade-up     { animation: fadeUp       0.60s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .animate-fade-in     { animation: fadeIn       0.40s ease-out backwards;                        }
+  .animate-slide-right { animation: slideInRight 0.50s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .animate-float       { animation: float        5.00s ease-in-out infinite;                      }
+  .animate-breathe     { animation: breathe      5.00s ease-in-out infinite;                      }
+  .animate-blink       { animation: blink        1.20s step-end infinite;                         }
+
+  /* ─── Stagger utilities ─────────────────────────────── */
+  .stagger-fade-in > * { animation: fadeUp 0.60s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .stagger-fade-in > *:nth-child(1) { animation-delay: 0.00s; }
+  .stagger-fade-in > *:nth-child(2) { animation-delay: 0.09s; }
+  .stagger-fade-in > *:nth-child(3) { animation-delay: 0.18s; }
+  .stagger-fade-in > *:nth-child(4) { animation-delay: 0.27s; }
+  .stagger-fade-in > *:nth-child(5) { animation-delay: 0.36s; }
+  .stagger-fade-in > *:nth-child(6) { animation-delay: 0.45s; }
+
+  /* ─── Skeleton / shimmer loading state ─────────────── */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--surface-1) 0%,
+      var(--surface-2) 45%,
+      var(--surface-1) 100%
+    );
+    background-size: 400px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* ─── Glass surface ─────────────────────────────────── */
+  .glass {
+    background: rgba(255, 252, 247, 0.65);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border: 1px solid rgba(221, 213, 195, 0.55);
+  }
+
+  /* ─── Inset top highlight (surface sheen) ───────────── */
+  .inset-shine {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75),
+                inset 0 -1px 0 rgba(28, 16, 8, 0.03);
   }
 }
 
 ::selection {
-  background: rgba(146, 64, 14, 0.2);
+  background: rgba(124, 45, 18, 0.14);
+  color: inherit;
 }

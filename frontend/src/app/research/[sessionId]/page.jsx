@@ -729,17 +729,60 @@ function PageContent({
           <h1 className="font-display text-2xl text-foreground">{detail.topic}</h1>
           <p className="mt-1 font-mono text-xs text-muted-foreground">{detail.session_id}</p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {/* ── Knowledge stats row ── */}
+          {detail.status === 'ready' && (
+            <div className="mt-6 grid grid-cols-3 gap-3">
+              {[
+                {
+                  value: detail.outcome?.corpus_stats?.total ?? 0,
+                  label: 'Sources ingested',
+                  sub: 'Papers, preprints, entries',
+                },
+                {
+                  value: detail.outcome?.knowledge_graph?.nodes?.length ?? 0,
+                  label: 'Entities mapped',
+                  sub: 'In knowledge graph',
+                },
+                {
+                  value: detail.outcome?.knowledge_graph?.edges?.length ?? 0,
+                  label: 'Relationships',
+                  sub: 'Graph connections',
+                },
+              ].map(({ value, label, sub }) => (
+                <div
+                  key={label}
+                  className="rounded-xl border p-4 text-center"
+                  style={{
+                    background: 'linear-gradient(145deg, var(--card), var(--surface-1))',
+                    borderColor: 'var(--border)',
+                    boxShadow: 'var(--shadow-xs), inset 0 1px 0 rgba(255,255,255,0.70)',
+                  }}
+                >
+                  <p
+                    className="font-display text-3xl leading-none"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    {value}
+                  </p>
+                  <p className="mt-1.5 text-xs font-medium" style={{ color: 'var(--foreground)' }}>{label}</p>
+                  <p className="mt-0.5 text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{sub}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Status + Memory ── */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-border bg-surface-1/60 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</p>
               <p className="mt-2">
                 <span
                   className={
                     detail.status === 'ready'
-                      ? 'rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success'
+                      ? 'rounded-full bg-success/15 px-2.5 py-1 text-xs font-mono font-semibold text-success'
                       : detail.status === 'error'
-                        ? 'rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive'
-                        : 'rounded-full bg-secondary px-2.5 py-1 text-xs font-medium'
+                        ? 'rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-mono font-semibold text-destructive'
+                        : 'rounded-full bg-secondary px-2.5 py-1 text-xs font-mono font-medium'
                   }
                 >
                   {detail.status}
@@ -748,25 +791,47 @@ function PageContent({
               {detail.error && <p className="mt-2 text-sm text-destructive">{detail.error}</p>}
             </div>
 
-            <div className="rounded-lg border border-border bg-surface-1/60 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Memory</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {detail.use_hydra
-                  ? detail.hydra_connected
-                    ? 'Cloud memory is on — recall and saved context are active.'
-                    : 'Cloud memory was requested but the server could not reach it.'
-                  : 'Cloud memory is off for this workspace.'}
-              </p>
-            </div>
-
-            {detail.outcome?.corpus_stats && (
-              <div className="rounded-lg border border-border bg-surface-1/60 p-4 sm:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Corpus</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {detail.outcome.corpus_stats.total ?? 0} sources collected
+            {/* Memory card — prominent when connected */}
+            <div
+              className="rounded-lg border p-4"
+              style={
+                detail.use_hydra && detail.hydra_connected
+                  ? {
+                      background: 'linear-gradient(135deg, var(--accent) 0%, var(--surface-1) 100%)',
+                      borderColor: 'var(--primary)',
+                      borderWidth: '1px',
+                      borderLeftWidth: '3px',
+                    }
+                  : { background: 'var(--surface-1)', borderColor: 'var(--border)' }
+              }
+            >
+              <div className="flex items-center gap-2 mb-2">
+                {/* HydraDB wave mark */}
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="none" style={{ color: detail.hydra_connected ? 'var(--primary)' : 'var(--muted-foreground)' }}>
+                  <path d="M1 8.5C2.5 5 4 3 7 3C10 3 11.5 5 13 8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                  <path d="M3 8.5C4 6.5 5 5.5 7 5.5C9 5.5 10 6.5 11 8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.55"/>
+                  <circle cx="7" cy="1.5" r="1" fill="currentColor" opacity="0.75"/>
+                </svg>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  HydraDB Memory
                 </p>
               </div>
-            )}
+              <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+                {detail.use_hydra
+                  ? detail.hydra_connected
+                    ? 'Active — papers ingested, graph built, recall enabled.'
+                    : 'Requested but could not reach the server.'
+                  : 'Off for this workspace.'}
+              </p>
+              {detail.use_hydra && detail.hydra_connected && (
+                <p
+                  className="mt-2 font-mono text-[10px] uppercase tracking-[0.08em]"
+                  style={{ color: 'var(--primary)', opacity: 0.75 }}
+                >
+                  Knowledge carries forward →
+                </p>
+              )}
+            </div>
           </div>
 
           {detail.status === 'error' ? (
@@ -825,13 +890,52 @@ function PageContent({
       const o = page.outcome;
       const history = Array.isArray(o?.synthesis_history) ? o.synthesis_history : [];
       const synthErr = typeof o?.synthesis_error === 'string' ? o.synthesis_error.trim() : '';
+      const sourceCount = detail.outcome?.corpus_stats?.total ?? 0;
       return (
         <div className="px-8 py-7">
-          <h2 className="mb-1 font-display text-xl text-foreground">Synthesis</h2>
-          <p className="mb-5 text-xs text-muted-foreground">
-            Latest analysis on top. Open the <strong className="text-foreground/90">Knowledge graph</strong> tab for the
-            interactive graph. Older runs are folded below.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
+            <div>
+              <h2 className="font-display text-xl text-foreground">Synthesis</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Latest analysis on top. Open <strong className="text-foreground/90">Knowledge graph</strong> for the
+                interactive graph.
+              </p>
+            </div>
+            {/* HydraDB metadata badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              {sourceCount > 0 && (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-wider"
+                  style={{
+                    background: 'var(--surface-1)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--muted-foreground)',
+                  }}
+                >
+                  {sourceCount} sources
+                </span>
+              )}
+              {detail.hydra_connected && (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-wider"
+                  style={{
+                    background: 'var(--accent)',
+                    border: '1px solid var(--primary)',
+                    borderWidth: '1px',
+                    color: 'var(--primary)',
+                  }}
+                >
+                  {/* HydraDB wave mark */}
+                  <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+                    <path d="M1 7.5C2 4.5 3.5 2.5 6 2.5C8.5 2.5 10 4.5 11 7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                    <path d="M2.5 7.5C3.3 5.8 4.4 5 6 5C7.6 5 8.7 5.8 9.5 7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.55"/>
+                    <circle cx="6" cy="1.2" r="0.9" fill="currentColor" opacity="0.75"/>
+                  </svg>
+                  HydraDB recall
+                </span>
+              )}
+            </div>
+          </div>
           {synthErr ? (
             <div className="mb-5 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               <p className="font-semibold text-destructive">Synthesis did not complete</p>
@@ -844,8 +948,25 @@ function PageContent({
             </div>
           ) : null}
           {o?.final_analysis ? (
-            <article className="rounded-lg border border-border bg-card p-5 shadow-sm">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-primary">Current</p>
+            <article
+              className="rounded-xl border p-6"
+              style={{
+                background: 'var(--card)',
+                borderColor: 'var(--border)',
+                boxShadow: 'var(--shadow-md), inset 0 1px 0 rgba(255,255,255,0.75)',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-4 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                <span
+                  className="rounded-full px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
+                  style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                >
+                  Current
+                </span>
+                <span className="font-mono text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+                  Latest synthesis run
+                </span>
+              </div>
               <div className="prose-sm max-w-none leading-relaxed">
                 <MarkdownContent>{o.final_analysis}</MarkdownContent>
               </div>
@@ -884,6 +1005,101 @@ function PageContent({
               </p>
             </div>
           )}
+          {/* Sources ingested to HydraDB */}
+          {(() => {
+            const papers = Array.isArray(o?.papers) ? o.papers : [];
+            if (papers.length === 0) return null;
+            return (
+              <details className="mt-6 group rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                <summary
+                  className="flex cursor-pointer list-none items-center justify-between px-5 py-4 marker:content-none [&::-webkit-details-marker]:hidden transition-colors"
+                  style={{ background: 'var(--surface-1)' }}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* HydraDB wave mark */}
+                    <svg width="14" height="10" viewBox="0 0 14 10" fill="none" style={{ color: 'var(--primary)' }}>
+                      <path d="M1 8.5C2.5 5 4 3 7 3C10 3 11.5 5 13 8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                      <path d="M3 8.5C4 6.5 5 5.5 7 5.5C9 5.5 10 6.5 11 8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.55"/>
+                      <circle cx="7" cy="1.5" r="1" fill="currentColor" opacity="0.75"/>
+                    </svg>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                      Sources ingested to HydraDB
+                    </span>
+                    <span
+                      className="rounded-full px-2 py-0.5 font-mono text-[10px]"
+                      style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                    >
+                      {papers.length}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+                    style={{ color: 'var(--muted-foreground)' }}
+                  />
+                </summary>
+
+                <div
+                  className="border-t divide-y"
+                  style={{ borderColor: 'var(--border)', background: 'var(--card)' }}
+                >
+                  {papers.slice(0, 30).map((p, idx) => (
+                    <div key={p.arxiv_id || idx} className="px-5 py-3.5 flex items-start gap-3">
+                      {/* Source badge */}
+                      <span
+                        className="shrink-0 mt-0.5 rounded px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wider"
+                        style={{
+                          background: p.source === 'arxiv' ? 'var(--primary)' : 'var(--surface-2)',
+                          color: p.source === 'arxiv' ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+                        }}
+                      >
+                        {p.source || 'src'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        {p.abs_url ? (
+                          <a
+                            href={p.abs_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[13px] font-medium leading-snug hover:underline"
+                            style={{ color: 'var(--foreground)' }}
+                          >
+                            {p.title}
+                          </a>
+                        ) : (
+                          <p className="text-[13px] font-medium leading-snug" style={{ color: 'var(--foreground)' }}>
+                            {p.title}
+                          </p>
+                        )}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                          {p.authors?.length > 0 && (
+                            <span className="font-mono text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+                              {p.authors.slice(0, 3).join(', ')}{p.authors.length > 3 ? ` +${p.authors.length - 3}` : ''}
+                            </span>
+                          )}
+                          {p.published && (
+                            <span className="font-mono text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+                              {p.published.slice(0, 4)}
+                            </span>
+                          )}
+                          {p.citation_count > 0 && (
+                            <span className="font-mono text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+                              {p.citation_count} citations
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {papers.length > 30 && (
+                    <p className="px-5 py-3 text-xs text-center" style={{ color: 'var(--muted-foreground)' }}>
+                      + {papers.length - 30} more sources in HydraDB
+                    </p>
+                  )}
+                </div>
+              </details>
+            );
+          })()}
+
           {history.length > 0 ? (
             <div className="mt-6 space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -922,21 +1138,59 @@ function PageContent({
     case 'transcript':
       return (
         <div className="px-8 py-7">
-          <h2 className="mb-5 font-display text-xl text-foreground">{page.label}</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="font-display text-xl text-foreground">{page.label}</h2>
+            <span
+              className="rounded-full px-2.5 py-0.5 font-mono text-[10px]"
+              style={{ background: 'var(--surface-1)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }}
+            >
+              {page.turns.length} turn{page.turns.length !== 1 ? 's' : ''}
+            </span>
+          </div>
           <ul className="space-y-3">
             {page.turns.map((t, i) => (
               <li
                 key={`${t.ts}-${i}`}
-                className={`rounded-md border px-3 py-2 text-sm transition-colors hover:bg-surface-1 ${
+                className="rounded-xl border overflow-hidden"
+                style={
                   t.role === 'user'
-                    ? 'border-primary/25 bg-primary/5'
-                    : 'border-border bg-surface-1/50'
-                }`}
+                    ? {
+                        borderColor: 'var(--primary)',
+                        borderWidth: '1px',
+                        borderLeftWidth: '3px',
+                        background: 'linear-gradient(135deg, var(--accent), var(--surface-1))',
+                        boxShadow: 'var(--shadow-xs)',
+                      }
+                    : {
+                        borderColor: 'var(--border)',
+                        background: 'var(--card)',
+                        boxShadow: 'var(--shadow-xs)',
+                      }
+                }
               >
-                {t.agent && (
-                  <span className="font-mono text-xs font-semibold text-primary">{t.agent}</span>
-                )}
-                <div className="mt-1 max-w-none text-foreground/90">
+                {/* Turn header */}
+                <div
+                  className="flex items-center gap-2 px-4 py-2.5 border-b"
+                  style={{ borderColor: t.role === 'user' ? 'rgba(124,45,18,0.15)' : 'var(--border)' }}
+                >
+                  <span
+                    className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
+                    style={
+                      t.role === 'user'
+                        ? { background: 'var(--primary)', color: 'var(--primary-foreground)' }
+                        : { background: 'var(--surface-2)', color: 'var(--muted-foreground)' }
+                    }
+                  >
+                    {t.role === 'user' ? 'You' : (t.agent || 'Agent')}
+                  </span>
+                  {t.ts && (
+                    <span className="font-mono text-[9px]" style={{ color: 'var(--muted-foreground)' }}>
+                      {new Date(t.ts * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+                {/* Turn content */}
+                <div className="px-4 py-3 max-w-none text-sm leading-relaxed text-foreground/90">
                   <MarkdownContent>{t.content}</MarkdownContent>
                 </div>
               </li>
@@ -945,41 +1199,101 @@ function PageContent({
         </div>
       );
 
-    case 'followup':
+    case 'followup': {
+      const specialists = ['Analyst', 'Critic', 'Synthesizer'];
       return (
         <div className="px-8 py-7">
-          <h2 className="mb-1 font-display text-xl text-foreground">Follow-up</h2>
-          <p className="mb-5 text-xs text-muted-foreground">
-            The right specialists are picked for each question you ask.
-          </p>
-          <form onSubmit={sendAgentTurn}>
-            <textarea
-              value={msg}
-              onChange={(e) => setMsg(e.target.value)}
-              rows={3}
-              placeholder="Ask a question or request a short literature summary…"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-shadow focus:shadow-sm"
-            />
-            {agentErr ? <p className="mt-2 text-sm text-destructive">{agentErr}</p> : null}
-            <Button
-              type="submit"
-              className="mt-3 gap-2 transition-transform duration-200 hover:-translate-y-0.5 hover:skew-x-[-1deg]"
-              disabled={agentBusy || !msg.trim()}
-            >
-              {agentBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Send
-            </Button>
-          </form>
+
+          {/* Header row */}
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-7">
+            <div>
+              <h2 className="font-display text-xl text-foreground">Follow-up</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Routed to the right specialist automatically
+              </p>
+            </div>
+            {/* Specialist pills */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {specialists.map((s) => (
+                <span
+                  key={s}
+                  className="rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider"
+                  style={{
+                    borderColor: 'var(--border)',
+                    background: 'var(--surface-1)',
+                    color: 'var(--muted-foreground)',
+                  }}
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Last reply — shown above the input */}
           {page.lastTurn?.final_answer ? (
-            <div className="mt-6 rounded-md border border-border bg-surface-1 p-4">
-              <p className="text-xs font-semibold uppercase text-muted-foreground">Last reply</p>
-              <div className="mt-2 max-w-none text-sm">
+            <div
+              className="mb-6 rounded-xl border p-5 relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(145deg, var(--card), var(--surface-1))',
+                borderColor: 'var(--border)',
+                borderLeftWidth: '3px',
+                borderLeftColor: 'var(--primary)',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <span
+                  className="rounded-full px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
+                  style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                >
+                  {page.lastTurn.agent || 'Agent'}
+                </span>
+                <span className="font-mono text-[10px]" style={{ color: 'var(--muted-foreground)' }}>replied</span>
+              </div>
+              <div className="max-w-none text-sm leading-relaxed">
                 <MarkdownContent>{page.lastTurn.final_answer}</MarkdownContent>
               </div>
             </div>
           ) : null}
+
+          {/* Input area */}
+          <form onSubmit={sendAgentTurn} className="relative">
+            <textarea
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                  e.preventDefault();
+                  if (!agentBusy && msg.trim()) sendAgentTurn(e);
+                }
+              }}
+              rows={4}
+              placeholder="Ask a follow-up question, request a deeper dive, or probe a conflict in the literature…"
+              className="w-full rounded-xl border border-input bg-background px-4 py-3 pb-12 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-shadow focus:shadow-sm resize-none"
+              style={{ boxShadow: 'var(--shadow-xs)' }}
+            />
+            {/* Floating send button */}
+            <div className="absolute bottom-3 right-3 flex items-center gap-2">
+              <span className="font-mono text-[9px] uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
+                ⌘↵
+              </span>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-8 gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all hover:-translate-y-0.5"
+                disabled={agentBusy || !msg.trim()}
+              >
+                {agentBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                Send
+              </Button>
+            </div>
+          </form>
+
+          {agentErr ? <p className="mt-2 text-sm text-destructive">{agentErr}</p> : null}
         </div>
       );
+    }
 
     default:
       return null;
