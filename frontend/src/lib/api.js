@@ -1,4 +1,6 @@
-// Same-origin only; Next rewrites /v1 to FastAPI. Do not set NEXT_PUBLIC_* to 127.0.0.1:8000.
+// Public origin for browser fetches to /v1/* (same host as the Next app). Optional: NEXT_PUBLIC_RESEARCH_API_BASE.
+// RESEARCH_API_URL (server-only) is where Next proxies to FastAPI — never 127.0.0.1:8000 in NEXT_PUBLIC_*.
+
 function normalizePath(path) {
   let s = typeof path === 'string' ? path.trim() : String(path);
   s = s.replace(/^https?:\/\/127\.0\.0\.1:8000/i, '');
@@ -9,12 +11,27 @@ function normalizePath(path) {
   return s;
 }
 
+/** Inlined at build time. Must be the site origin (https://your-app.onrender.com), not the internal API. */
+function configuredPublicOrigin() {
+  const raw = (process.env.NEXT_PUBLIC_RESEARCH_API_BASE || '').trim();
+  if (!raw) return '';
+  const base = raw.replace(/\/$/, '');
+  // Never use direct FastAPI URL in the browser (common mistake).
+  if (/^https?:\/\/(127\.0\.0\.1|localhost):8000\/?$/i.test(base)) {
+    return '';
+  }
+  return base;
+}
+
 function apiUrl(path) {
   const p = normalizePath(path);
+  const fromEnv = configuredPublicOrigin();
+  if (fromEnv) {
+    return `${fromEnv}${p}`;
+  }
   if (typeof window === 'undefined') {
     return p;
   }
-  // Avoid `new URL('//127.0.0.1:8000/...', origin)` — that becomes https://127.0.0.1:8000/... in the browser.
   return `${window.location.origin}${p}`;
 }
 

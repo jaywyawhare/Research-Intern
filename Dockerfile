@@ -8,9 +8,12 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci
 COPY frontend/ ./
-# Rewrites embed this URL at build time; runtime uses the same loopback backend.
+# Rewrites: Next → FastAPI inside the container.
 ARG RESEARCH_API_URL=http://127.0.0.1:8000
 ENV RESEARCH_API_URL=${RESEARCH_API_URL}
+# Optional: public https origin for client fetches (e.g. https://your-service.onrender.com). Empty = use page URL.
+ARG NEXT_PUBLIC_RESEARCH_API_BASE=
+ENV NEXT_PUBLIC_RESEARCH_API_BASE=${NEXT_PUBLIC_RESEARCH_API_BASE}
 RUN npm run build
 
 FROM python:3.12-slim-bookworm AS runtime
