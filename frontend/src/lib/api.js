@@ -1,8 +1,25 @@
-const base = () => '';
+// Calls stay same-origin; Next rewrites /v1 to FastAPI. Do not point NEXT_PUBLIC_* at 127.0.0.1:8000.
+function normalizePath(path) {
+  let s = typeof path === 'string' ? path.trim() : String(path);
+  s = s.replace(/^https?:\/\/127\.0\.0\.1:8000/i, '');
+  s = s.replace(/^https?:\/\/localhost:8000/i, '');
+  if (!s.startsWith('/')) s = `/${s}`;
+  return s;
+}
 
-function headers(init) {
+function apiUrl(path) {
+  const p = normalizePath(path);
+  if (typeof window !== 'undefined') {
+    return new URL(p, window.location.origin).href;
+  }
+  return p;
+}
+
+function headers(init, { withJsonContentType = true } = {}) {
   const h = new Headers(init);
-  h.set('Content-Type', 'application/json');
+  if (withJsonContentType) {
+    h.set('Content-Type', 'application/json');
+  }
   const key = process.env.NEXT_PUBLIC_RESEARCH_API_KEY;
   if (key) {
     h.set('X-API-Key', key);
@@ -49,8 +66,8 @@ async function throwIfNotOk(r) {
 }
 
 export async function apiGet(path) {
-  const r = await fetch(`${base()}${path}`, {
-    headers: headers(),
+  const r = await fetch(apiUrl(path), {
+    headers: headers(undefined, { withJsonContentType: false }),
     cache: 'no-store',
   });
   await throwIfNotOk(r);
@@ -58,7 +75,7 @@ export async function apiGet(path) {
 }
 
 export async function apiPost(path, body) {
-  const r = await fetch(`${base()}${path}`, {
+  const r = await fetch(apiUrl(path), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify(body),
@@ -68,9 +85,9 @@ export async function apiPost(path, body) {
 }
 
 export async function apiDelete(path) {
-  const r = await fetch(`${base()}${path}`, {
+  const r = await fetch(apiUrl(path), {
     method: 'DELETE',
-    headers: headers(),
+    headers: headers(undefined, { withJsonContentType: false }),
   });
   await throwIfNotOk(r);
 }
