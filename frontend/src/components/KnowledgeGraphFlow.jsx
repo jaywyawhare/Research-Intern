@@ -112,14 +112,12 @@ export function KnowledgeGraphFlow({
   const { graphData, cappedNodes, cappedEdges, totalNodes, totalEdges } = useMemo(() => {
     const nodes = Array.isArray(rawNodes) ? rawNodes : [];
     const edges = Array.isArray(rawEdges) ? rawEdges : [];
-    console.log('[KnowledgeGraphFlow] rawNodes:', nodes.length, 'rawEdges:', edges.length);
     const overNodes = nodes.length > MAX_NODES;
     const sliced = overNodes ? nodes.slice(0, MAX_NODES) : nodes;
     const idSet = new Set(sliced.map((n) => n.id));
     let de = edges.filter((e) => idSet.has(e.source) && idSet.has(e.target));
     const overEdges = de.length > MAX_EDGES;
     if (overEdges) de = de.slice(0, MAX_EDGES);
-    console.log('[KnowledgeGraphFlow] graphData nodes:', sliced.length, 'edges:', de.length);
     return {
       graphData: buildGraph(sliced, de),
       cappedNodes: overNodes,
@@ -223,7 +221,7 @@ export function KnowledgeGraphFlow({
   );
 
   const nodePointerAreaPaint = useCallback((node, color, ctx) => {
-    const r = (node.__r ?? NODE_RADIUS) + 5;
+    const r = (node.__r ?? NODE_RADIUS) + 8;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
@@ -252,6 +250,8 @@ export function KnowledgeGraphFlow({
     return null;
   }
 
+  const hasSelection = Boolean(selectedNodeId || selectedLinkId);
+
   return (
     <div className="space-y-2">
       {(cappedNodes || cappedEdges) && (
@@ -260,6 +260,17 @@ export function KnowledgeGraphFlow({
           {cappedEdges ? `First ${MAX_EDGES} of ${totalEdges} edges.` : ''}
         </p>
       )}
+      {hasSelection && onClearSelection ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => onClearSelection()}
+            className="rounded-md border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground shadow-sm hover:bg-muted/60"
+          >
+            Clear selection
+          </button>
+        </div>
+      ) : null}
       <div
         ref={surfaceRef}
         className="relative h-[min(620px,calc(100vh-14rem))] min-h-[420px] w-full min-w-0 overflow-hidden rounded-xl border border-border/40 bg-[#f5f0e8]"
@@ -304,7 +315,6 @@ export function KnowledgeGraphFlow({
             onLinkClick={(link) => {
               onSelectLink?.(link.id);
             }}
-            onBackgroundClick={() => onClearSelection?.()}
             onNodeHover={(node) => {
               const el = surfaceRef.current;
               if (el) el.style.cursor = node ? 'pointer' : 'grab';
@@ -349,7 +359,7 @@ export function KnowledgeGraphFlow({
       </div>
 
       <p className="mt-2 text-[10px] text-muted-foreground/60">
-        Click node or edge · Esc to clear · hover for names
+        Click a node or edge to inspect · Esc or Clear selection · hover for labels
       </p>
     </div>
   );

@@ -329,7 +329,8 @@ export function KnowledgeGraphPanel({ knowledgeGraph, embedded = false }) {
         Knowledge graph
       </h2>
       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-        Entities and relations from cloud memory recall. Click a node or edge to open details.
+        Entities and relations from cloud memory recall. Click a node or edge in the canvas to open details (use Esc or
+        Clear selection to dismiss).
       </p>
 
       <div
