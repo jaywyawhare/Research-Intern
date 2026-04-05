@@ -31,7 +31,7 @@ export default function ResearchSessionsPage() {
   async function onCreate(e) {
     e.preventDefault();
     if (!topic.trim()) {
-      setErr('Enter a topic above before creating a session.');
+      setErr('Enter a topic in the box above before you create a session.');
       return;
     }
     setLoading(true);
@@ -80,7 +80,7 @@ export default function ResearchSessionsPage() {
           className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         <fieldset className="mt-4 space-y-4 border-t border-border pt-4">
-          <legend className="text-sm font-medium text-foreground">Session build options</legend>
+          <legend className="text-sm font-medium text-foreground">Options for your new session</legend>
           <label className="flex cursor-pointer gap-3 rounded-md border border-border bg-muted/20 p-3 text-sm leading-snug">
             <input
               type="checkbox"
@@ -89,10 +89,10 @@ export default function ResearchSessionsPage() {
               className="mt-0.5 h-4 w-4 shrink-0 rounded border-input text-primary focus-visible:ring-2 focus-visible:ring-ring"
             />
             <span className="min-w-0 flex-1 space-y-1">
-              <span className="block font-semibold text-foreground">Hydra DB</span>
+              <span className="block font-semibold text-foreground">Cloud memory</span>
               <p className="text-muted-foreground leading-relaxed">
-                Session-scoped recall and corpus ingest. Configure Hydra on the API server; if it is
-                unavailable, the session still builds a local corpus.
+                When your server supports it, tie recall and saved notes to this session. If that service is
+                not available, the run still gathers sources for your topic.
               </p>
             </span>
           </label>
@@ -104,10 +104,10 @@ export default function ResearchSessionsPage() {
               className="mt-0.5 h-4 w-4 shrink-0 rounded border-input text-primary focus-visible:ring-2 focus-visible:ring-ring"
             />
             <span className="min-w-0 flex-1 space-y-1">
-              <span className="block font-semibold text-foreground">Initial LLM synthesis</span>
+              <span className="block font-semibold text-foreground">Initial synthesis</span>
               <p className="text-muted-foreground leading-relaxed">
-                Run the literature-analysis model once after ingest. Configure your LLM provider on the API
-                server. Agent turns also use the LLM when that is set up.
+                Run the literature analysis once after sources are gathered. Your API server needs an AI
+                provider configured. Follow-up questions use the same setup when available.
               </p>
             </span>
           </label>
@@ -132,7 +132,8 @@ export default function ResearchSessionsPage() {
       <ul className="space-y-3">
         {sessions.length === 0 ? (
           <li className="rounded-lg border border-dashed border-border bg-surface-1/50 py-12 text-center text-sm text-muted-foreground">
-            No sessions yet. Create one above (defaults: Hydra + LLM when configured on the server).
+            No sessions yet. Add a topic and choose Create session. Cloud memory and the initial synthesis
+            are available when your server is set up for them.
           </li>
         ) : (
           sessions.map((s) => (
@@ -148,9 +149,9 @@ export default function ResearchSessionsPage() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       {s.use_hydra
                         ? s.hydra_connected
-                          ? 'Hydra · connected'
-                          : 'Hydra · not connected'
-                        : 'Hydra · off'}
+                          ? 'Cloud memory · on'
+                          : 'Cloud memory · unavailable'
+                        : 'Cloud memory · off'}
                     </p>
                   </div>
                   <span

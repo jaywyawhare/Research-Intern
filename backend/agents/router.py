@@ -98,9 +98,9 @@ async def plan_agent_pipeline(
         prompt = (
             "You route user messages to specialist agents for a research session.\n\n"
             "Agents (use lowercase ids only):\n"
-            "- librarian: corpus inventory — counts, sources, gaps, what was gathered.\n"
-            "- scholar: thematic synthesis — trends, methods, big-picture narrative across papers.\n"
-            "- interlocutor: targeted Q&A — specific factual or analytical questions.\n\n"
+            "- librarian: corpus inventory (counts, sources, gaps, what was gathered).\n"
+            "- scholar: thematic synthesis (trends, methods, big-picture narrative across papers).\n"
+            "- interlocutor: targeted Q&A (specific factual or analytical questions).\n\n"
             "Rules:\n"
             "- Return JSON only, no markdown.\n"
             '- Shape: {"agents":["interlocutor"],"rationale":"one short sentence"}\n'

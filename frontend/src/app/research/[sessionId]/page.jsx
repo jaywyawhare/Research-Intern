@@ -22,7 +22,7 @@ function sessionIdFromParams(params) {
 function friendlyLoadError(message) {
   const s = (message || '').toLowerCase();
   if (s.includes('session not found') || s.includes('not found')) {
-    return "We couldn't load this session. It may no longer exist—open one from the workspace.";
+    return "We couldn't load this session. It may no longer exist. Open one from the workspace.";
   }
   return message || 'Something went wrong loading this session.';
 }
@@ -124,12 +124,13 @@ export default function SessionDetailPage() {
         <p className="mt-2 text-xs text-muted-foreground">
           {detail.use_hydra ? (
             detail.hydra_connected ? (
-              <>Hydra: connected · ingest/recall active for this session.</>
+              <>Cloud memory is on for this workspace. Recall and saved context are active.</>
             ) : (
-              <>Hydra was requested but the API could not connect. Check Hydra credentials on the server.</>
+              <>Cloud memory was requested but the server could not reach it. Check setup with whoever runs
+              the API.</>
             )
           ) : (
-            <>Hydra: off for this session.</>
+            <>Cloud memory is off for this workspace.</>
           )}
         </p>
         <p className="mt-3">
@@ -151,20 +152,20 @@ export default function SessionDetailPage() {
       </header>
 
       {detail.status === 'pending' || detail.status === 'running' ? (
-        <p className="mb-8 text-sm text-muted-foreground">Building corpus… this page refreshes automatically.</p>
+        <p className="mb-8 text-sm text-muted-foreground">
+          Gathering sources… this page refreshes automatically.
+        </p>
       ) : null}
 
       {detail.status === 'ready' &&
       detail.outcome &&
       (detail.outcome.corpus_stats?.total ?? 0) === 0 ? (
         <div className="mb-8 rounded-lg border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
-          <p className="font-medium">No corpus items were retrieved for this session.</p>
+          <p className="font-medium">No sources were found for this workspace.</p>
           <p className="mt-1 text-amber-900/90 dark:text-amber-100/85">
-            Create a new session from the workspace with a clearer topic, or use the API with{' '}
-            <code className="rounded bg-black/5 px-1 font-mono text-xs dark:bg-white/10">
-              raw_arxiv_query
-            </code>
-            , more sources, or Hydra. Older sessions used a very narrow arXiv filter and no Wikipedia/Crossref.
+            Try starting a new session with a clearer topic, or ask whoever runs this deployment to widen
+            sources or turn on cloud memory. Some older sessions used a narrower paper filter and fewer web
+            sources.
           </p>
         </div>
       ) : null}
@@ -205,23 +206,23 @@ export default function SessionDetailPage() {
 
       {detail.status === 'ready' ? (
         <section className="rounded-lg border border-border bg-card p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Multi-agent turn</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Follow-up</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            The router chooses agents for each turn (or set{' '}
-            <code className="rounded bg-surface-2 px-1">force_agents</code> via API).
+            The right specialists are picked for each question you ask. Advanced setups can pin specific
+            experts through the API.
           </p>
           <form onSubmit={sendAgentTurn} className="mt-4">
             <textarea
               value={msg}
               onChange={(e) => setMsg(e.target.value)}
               rows={3}
-              placeholder="Ask a question or request a corpus summary…"
+              placeholder="Ask a question or request a short literature summary…"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             {agentErr ? <p className="mt-2 text-sm text-destructive">{agentErr}</p> : null}
             <Button type="submit" className="mt-3 gap-2" disabled={agentBusy || !msg.trim()}>
               {agentBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Run agents
+              Send
             </Button>
           </form>
           {lastTurn?.final_answer ? (
