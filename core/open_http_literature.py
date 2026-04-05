@@ -15,25 +15,25 @@ from .arxiv_literature import PaperRecord
 
 logger = logging.getLogger(__name__)
 
-_WIKI_UA = "ResearchIntern/1.0 (+https://arxiv.org/help/api; contact: local use)"
+_WIKI_UA = "AIResearcher/1.0 (+https://arxiv.org/help/api; contact: local use)"
 _EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
 
 def _crossref_mailto() -> str:
     return (
         os.environ.get("RESEARCH_INTERN_CROSSREF_MAILTO", "").strip()
-        or "research-intern@users.noreply.github.org"
+        or "ai-researcher@users.noreply.github.org"
     )
 
 
 def _ncbi_tool_email() -> tuple[str, str]:
-    tool = os.environ.get("RESEARCH_INTERN_NCBI_TOOL", "").strip() or "research_intern"
+    tool = os.environ.get("RESEARCH_INTERN_NCBI_TOOL", "").strip() or "ai_researcher"
     email = os.environ.get("RESEARCH_INTERN_NCBI_EMAIL", "").strip() or _crossref_mailto()
     return tool, email
 
 
 def _openalex_user_agent() -> str:
-    return f"ResearchIntern/1.0 (mailto:{_crossref_mailto()})"
+    return f"AIResearcher/1.0 (mailto:{_crossref_mailto()})"
 
 
 def _reconstruct_openalex_abstract(inv: dict[str, Any] | None) -> str:
@@ -190,7 +190,7 @@ async def fetch_crossref_records(
         return ()
     rows = min(max(max_results, 1), 25)
     mail = mailto or _crossref_mailto()
-    ua = f"ResearchIntern/1.0 (mailto:{mail})"
+    ua = f"AIResearcher/1.0 (mailto:{mail})"
     params = {"query": topic.strip(), "rows": str(rows)}
     try:
         r = await client.get(

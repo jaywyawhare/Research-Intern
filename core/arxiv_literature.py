@@ -133,7 +133,7 @@ async def fetch_recent_papers(
         f"search_query={encoded}&start=0&max_results={n}"
         "&sortBy=submittedDate&sortOrder=descending"
     )
-    headers = {"User-Agent": "ResearchIntern/1.0 (+https://arxiv.org/help/api)"}
+    headers = {"User-Agent": "AIResearcher/1.0 (+https://arxiv.org/help/api)"}
 
     async def _do_get(c: httpx.AsyncClient) -> ArxivFetchResult:
         response = await c.get(url, headers=headers)
