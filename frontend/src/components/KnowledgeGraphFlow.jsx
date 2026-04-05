@@ -288,6 +288,7 @@ export function KnowledgeGraphFlow({
             width={graphW}
             height={graphH}
             showNavInfo={false}
+            enableNodeDrag={false}
             nodeRelSize={4}
             nodeVal={1}
             nodeLabel={(n) => n.label || n.id}
@@ -323,12 +324,6 @@ export function KnowledgeGraphFlow({
               const el = surfaceRef.current;
               if (el) el.style.cursor = link ? 'pointer' : 'grab';
             }}
-            onNodeDragEnd={(node) => {
-              if (node.x != null && node.y != null) {
-                node.fx = node.x;
-                node.fy = node.y;
-              }
-            }}
           />
         </div>
       </div>
@@ -359,7 +354,7 @@ export function KnowledgeGraphFlow({
       </div>
 
       <p className="mt-2 text-[10px] text-muted-foreground/60">
-        Click a node or edge to inspect · Esc or Clear selection · hover for labels
+        Click a node or edge to inspect · pan/zoom the canvas · Esc or Clear selection
       </p>
     </div>
   );
