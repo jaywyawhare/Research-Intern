@@ -136,6 +136,12 @@ async def _async_main(argv: list[str] | None) -> int:
         help="Write primary stdout content to this file (model analysis, or prompt with --prompt-only)",
     )
     parser.add_argument(
+        "--knowledge-graph-json",
+        default="",
+        metavar="FILE",
+        help="Write knowledge_graph JSON from recall (nodes, edges, paths, stats); skipped if empty or no Hydra",
+    )
+    parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
@@ -221,6 +227,19 @@ async def _async_main(argv: list[str] | None) -> int:
         llm_stream=True if args.llm_stream else None,
     )
 
+    kg = outcome.knowledge_graph
+    kg_path = (args.knowledge_graph_json or "").strip()
+    if kg_path and kg:
+        try:
+            with open(kg_path, "w", encoding="utf-8") as gf:
+                json.dump(kg, gf, indent=2, ensure_ascii=False)
+        except OSError as e:
+            print(f"Could not write --knowledge-graph-json {kg_path!r}: {e}", file=sys.stderr)
+            return 1
+    elif kg_path and not kg:
+        if not args.quiet:
+            print("No knowledge_graph to write (empty or --no-hydra).", file=sys.stderr)
+
     text = outcome.final_analysis if outcome.final_analysis is not None else outcome.analysis_prompt
     if args.output:
         path = args.output
@@ -228,20 +247,29 @@ async def _async_main(argv: list[str] | None) -> int:
             f.write(text)
         if not args.quiet:
             kind = "analysis" if outcome.final_analysis is not None else "prompt"
+            _kg_note = ""
+            if kg and isinstance(kg.get("stats"), dict):
+                st = kg["stats"]
+                _kg_note = f"; knowledge_graph: {st.get('node_count', 0)} nodes, {st.get('edge_count', 0)} edges"
             print(
                 f"Wrote {kind} ({len(text)} chars) to {path!r}; "
                 f"{len(outcome.papers)} corpus items; arXiv: {outcome.arxiv_search_query!r}; "
-                f"corpus_stats: {json.dumps(outcome.corpus_stats, sort_keys=True)}",
+                f"corpus_stats: {json.dumps(outcome.corpus_stats, sort_keys=True)}{_kg_note}",
                 file=sys.stderr,
             )
     else:
         print(text)
         if not args.quiet:
+            _kg_line = ""
+            if kg and isinstance(kg.get("stats"), dict):
+                st = kg["stats"]
+                _kg_line = f"knowledge_graph: {st.get('node_count', 0)} nodes, {st.get('edge_count', 0)} edges\n"
             print(
                 f"\n---\n{len(outcome.papers)} corpus items | session: {session_id}\n"
                 f"arXiv: {outcome.arxiv_search_query!r}\n"
                 f"extras: {outcome.extra_source_summary or '(none)'}\n"
-                f"corpus_stats: {json.dumps(outcome.corpus_stats, sort_keys=True)}",
+                f"corpus_stats: {json.dumps(outcome.corpus_stats, sort_keys=True)}\n"
+                f"{_kg_line}",
                 file=sys.stderr,
             )
 

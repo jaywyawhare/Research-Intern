@@ -19,6 +19,7 @@ from .open_http_literature import (
     fetch_wikipedia_records,
     shared_http_client,
 )
+from .knowledge_graph_view import build_knowledge_graph_view
 from .prompts import build_analysis_prompt
 
 if TYPE_CHECKING:
@@ -41,6 +42,12 @@ class LiteraturePhaseOutcome:
     knowledge_context: str
     analysis_prompt: str
     final_analysis: str | None = None
+    knowledge_graph: dict[str, Any] | None = None
+
+
+def paper_record_to_ingest_markdown(p: PaperRecord) -> str:
+    """Markdown body uploaded to Hydra for a structured corpus paper (same shape as initial run)."""
+    return _corpus_ingest_body(p)
 
 
 def _corpus_ingest_body(p: PaperRecord) -> str:
@@ -127,6 +134,7 @@ async def run_literature_phase(
     ``sys.stderr``). Provider-specific JSON can be passed via ``openai_extra_body`` or env
     ``OPENAI_EXTRA_BODY``; throttle with ``OPENAI_MAX_RPM`` (e.g. ``30``).
     """
+    knowledge_graph: dict[str, Any] | None = None
     if bridge is None:
         user_ctx, know_ctx = "", ""
         if restrict_recall_to_session or recall_metadata_filters:
@@ -134,10 +142,12 @@ async def run_literature_phase(
         if ingest_to_knowledge:
             logger.warning("ingest_to_knowledge ignored without a HydraResearchBridge")
     else:
+        logger.info("session %s: calling Hydra recall for topic='%s'", session_id, topic)
         recall_filters = _recall_filters_for_session(
             session_id, restrict_recall_to_session, recall_metadata_filters
         )
         ctx = await bridge.gather_context_for_topic(topic, metadata_filters=recall_filters)
+        logger.info("session %s: Hydra recall complete", session_id)
         user_ctx = ctx.get("user_context") or ""
         know_ctx = ctx.get("knowledge_context") or ""
 
@@ -220,6 +230,7 @@ async def run_literature_phase(
     extra_source_summary = "\n".join(extra_lines)
 
     if ingest_to_knowledge and bridge is not None:
+        logger.info("session %s: starting ingest of %d papers", session_id, len(ptuple))
         n = len(ptuple)
         for i, p in enumerate(ptuple):
             await bridge.ingest_markdown_source(
@@ -236,8 +247,32 @@ async def run_literature_phase(
                     "citation_count": p.citation_count,
                 },
             )
+            if i % 5 == 0:
+                logger.info("session %s: ingested %d/%d papers", session_id, i + 1, n)
             if ingest_pause_seconds > 0 and i < n - 1:
                 await asyncio.sleep(ingest_pause_seconds)
+        logger.info("session %s: ingest complete, waiting for indexing", session_id)
+
+        await asyncio.sleep(5)
+
+        ctx_after = await bridge.gather_context_for_topic(topic, metadata_filters=recall_filters)
+        user_ctx = ctx_after.get("user_context") or ""
+        know_ctx = ctx_after.get("knowledge_context") or ""
+
+        ctx_for_graph = await bridge.gather_context_for_topic(topic)
+        full_raw_after = ctx_for_graph.get("full_recall_raw")
+        pref_raw_after = ctx_for_graph.get("recall_preferences_raw")
+        if isinstance(full_raw_after, dict) or isinstance(pref_raw_after, dict):
+            knowledge_graph = build_knowledge_graph_view(
+                full_raw_after if isinstance(full_raw_after, dict) else None,
+                pref_raw_after if isinstance(pref_raw_after, dict) else None,
+            )
+            logger.info(
+                "Knowledge graph built after ingest: %d nodes, %d edges, %d paths",
+                knowledge_graph.get("stats", {}).get("node_count", 0),
+                knowledge_graph.get("stats", {}).get("edge_count", 0),
+                knowledge_graph.get("stats", {}).get("path_count", 0),
+            )
 
     prompt = build_analysis_prompt(
         topic=topic,
@@ -291,4 +326,97 @@ async def run_literature_phase(
         knowledge_context=know_ctx,
         analysis_prompt=prompt,
         final_analysis=final,
+        knowledge_graph=knowledge_graph,
     )
+
+
+async def regenerate_session_knowledge_graph(
+    bridge: HydraResearchBridge,
+    *,
+    topic: str,
+    session_id: str,
+    restrict_recall_to_session: bool = False,
+    recall_metadata_filters: Mapping[str, Any] | None = None,
+    run_llm: bool = True,
+    existing_papers: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """
+    Re-run Hydra recall for a session's topic and rebuild the knowledge graph.
+    Optionally re-run LLM analysis with the updated graph.
+    Returns a dict suitable for patching the session outcome.
+    """
+    recall_filters = _recall_filters_for_session(
+        session_id, restrict_recall_to_session, recall_metadata_filters
+    )
+    ctx = await bridge.gather_context_for_topic(topic, metadata_filters=recall_filters)
+    user_ctx = ctx.get("user_context") or ""
+    know_ctx = ctx.get("knowledge_context") or ""
+    full_raw = ctx.get("full_recall_raw")
+    pref_raw = ctx.get("recall_preferences_raw")
+
+    knowledge_graph: dict[str, Any] | None = None
+    if isinstance(full_raw, dict) or isinstance(pref_raw, dict):
+        knowledge_graph = build_knowledge_graph_view(
+            full_raw if isinstance(full_raw, dict) else None,
+            pref_raw if isinstance(pref_raw, dict) else None,
+        )
+        logger.info(
+            "Knowledge graph regenerated: session_id=%s nodes=%d edges=%d paths=%d",
+            session_id,
+            knowledge_graph.get("stats", {}).get("node_count", 0),
+            knowledge_graph.get("stats", {}).get("edge_count", 0),
+            knowledge_graph.get("stats", {}).get("path_count", 0),
+        )
+
+    final_analysis = None
+    synthesis_error: str | None = None
+    analysis_prompt: str | None = None
+    if run_llm:
+        paper_rows = existing_papers or []
+        ptuple = [
+            PaperRecord(
+                arxiv_id=p.get("arxiv_id", ""),
+                title=p.get("title", ""),
+                summary=p.get("summary", ""),
+                published=p.get("published", ""),
+                abs_url=p.get("abs_url", ""),
+                source=p.get("source", "arxiv"),
+                authors=tuple(p.get("authors", [])),
+                venue=p.get("venue", ""),
+                citation_count=p.get("citation_count", 0),
+            )
+            for p in paper_rows
+        ]
+        arxiv_q = f"all:\"{topic}\""
+        prompt = build_analysis_prompt(
+            topic=topic,
+            user_context=user_ctx,
+            knowledge_context=know_ctx,
+            papers=tuple(ptuple),
+            arxiv_search_query=arxiv_q,
+            extra_source_summary="",
+        )
+        analysis_prompt = prompt
+        hydra_config.load_dotenv()
+        key = os.environ.get("OPENAI_API_KEY", "").strip() or os.environ.get("NVIDIA_API_KEY", "").strip()
+        if not key:
+            synthesis_error = "No OPENAI_API_KEY or NVIDIA_API_KEY is set; synthesis was skipped."
+        else:
+            try:
+                final_analysis = await run_analysis_completion(prompt, stream=False)
+                logger.info("LLM analysis re-run complete for session %s", session_id)
+            except Exception as e:
+                err = str(e).strip() or repr(e)
+                synthesis_error = err[:2000]
+                logger.warning("LLM re-analysis failed for session %s: %s", session_id, e)
+
+    out: dict[str, Any] = {
+        "knowledge_graph": knowledge_graph,
+        "user_context": user_ctx,
+        "knowledge_context": know_ctx,
+    }
+    if run_llm:
+        out["analysis_prompt"] = analysis_prompt
+        out["final_analysis"] = final_analysis
+        out["synthesis_error"] = synthesis_error
+    return out

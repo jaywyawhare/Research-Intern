@@ -67,6 +67,12 @@ class HydraResearchBridge:
             k["sub_tenant_id"] = self.sub_tenant_id
         return k
 
+    @staticmethod
+    def _recall_graph_context_flag() -> bool:
+        """Hydra recall accepts graph_context=…; default on so query_paths/chunk_relations can populate."""
+        raw = (os.environ.get("HYDRADB_RECALL_GRAPH_CONTEXT") or "1").strip().lower()
+        return raw not in ("0", "false", "no", "off")
+
     async def gather_context_for_topic(
         self,
         topic: str,
@@ -76,13 +82,23 @@ class HydraResearchBridge:
         base = self._tenant_kwargs()
         if metadata_filters:
             base = {**base, "metadata_filters": dict(metadata_filters)}
+        gc = self._recall_graph_context_flag()
+        base = {**base, "graph_context": gc}
         q = topic.strip()
-        pref = await self._client.recall.recall_preferences(query=q, **base)
-        full = await self._client.recall.full_recall(query=q, **base)
-        return {
-            "user_context": build_context_string(_pydantic_to_dict(pref)),
-            "knowledge_context": build_context_string(_pydantic_to_dict(full)),
-        }
+
+        async def _recall_once() -> dict[str, str]:
+            pref = await self._client.recall.recall_preferences(query=q, **base)
+            full = await self._client.recall.full_recall(query=q, **base)
+            pref_d = _pydantic_to_dict(pref)
+            full_d = _pydantic_to_dict(full)
+            return {
+                "user_context": build_context_string(pref_d),
+                "knowledge_context": build_context_string(full_d),
+                "recall_preferences_raw": pref_d,
+                "full_recall_raw": full_d,
+            }
+
+        return await run_with_upload_retries(_recall_once, logger=logger)
 
     async def ingest_markdown_source(
         self,
