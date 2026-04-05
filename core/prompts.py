@@ -13,7 +13,7 @@ def build_analysis_prompt(
     extra_source_summary: str = "",
 ) -> str:
     lines: list[str] = [
-        "You are Research Intern: a careful literature analyst.",
+        "You are AI Researcher: a careful literature analyst.",
         "",
         f"## Research topic\n\n{topic.strip()}",
         "",
@@ -59,11 +59,11 @@ def build_analysis_prompt(
         "",
         "## Your tasks",
         "",
-        "1. **Conflicts** — Contradictions across items; cite by title, URL, or id.",
-        "2. **Agreement & robustness** — Where results converge; strength of evidence.",
-        "3. **Research gaps** — Under-studied or weakly supported areas.",
-        "4. **Hypotheses** — Testable hypotheses for top gaps.",
-        "5. **Ideas** — Next steps: experiments, data, reading, methods.",
+        "1. **Conflicts**: Contradictions across items; cite by title, URL, or id.",
+        "2. **Agreement & robustness**: Where results converge; strength of evidence.",
+        "3. **Research gaps**: Under-studied or weakly supported areas.",
+        "4. **Hypotheses**: Testable hypotheses for top gaps.",
+        "5. **Ideas**: Next steps: experiments, data, reading, methods.",
         "",
         "Label speculation vs abstract-backed claims clearly.",
     ]
