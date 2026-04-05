@@ -65,6 +65,56 @@ def _strip_jats_like_abstract(raw: str) -> str:
     return " ".join(t.split()).strip()
 
 
+def _crossref_author_names(authors: Any, *, limit: int = 14) -> list[str]:
+    if not isinstance(authors, list):
+        return []
+    names: list[str] = []
+    for au in authors[:limit]:
+        if not isinstance(au, dict):
+            continue
+        fam = (au.get("family") or "").strip()
+        giv = (au.get("given") or "").strip()
+        if fam or giv:
+            names.append(" ".join(x for x in (giv, fam) if x).strip())
+        else:
+            n = (au.get("name") or "").strip()
+            if n:
+                names.append(n)
+    return names
+
+
+def _crossref_metadata_summary(it: dict[str, Any], *, doi: str) -> str:
+    """When Crossref has no abstract, still give agents usable text from the work JSON."""
+    lines: list[str] = []
+    names = _crossref_author_names(it.get("author"))
+    if names:
+        tail = " …" if isinstance(it.get("author"), list) and len(it["author"]) > len(names) else ""
+        lines.append("Authors: " + "; ".join(names) + tail)
+    ctype = it.get("container-title")
+    if isinstance(ctype, list) and ctype:
+        lines.append("Venue: " + str(ctype[0]).strip())
+    elif isinstance(ctype, str) and ctype.strip():
+        lines.append("Venue: " + ctype.strip())
+    pub = (it.get("publisher") or "").strip()
+    if pub:
+        lines.append("Publisher: " + pub)
+    typ = (it.get("type") or "").strip()
+    if typ:
+        lines.append("Type: " + typ.replace("-", " "))
+    subj = it.get("subject")
+    if isinstance(subj, list) and subj:
+        topics = [str(s).strip() for s in subj if str(s).strip()][:10]
+        if topics:
+            lines.append("Topics: " + "; ".join(topics))
+    cited = it.get("is-referenced-by-count")
+    if isinstance(cited, int) and cited >= 0:
+        lines.append(f"Citation count (Crossref): {cited}")
+    if doi:
+        lines.append(f"DOI: {doi}")
+    lines.append("Note: Crossref did not expose abstract text for this hit; use title + metadata or follow the DOI link.")
+    return "\n".join(lines)
+
+
 async def fetch_wikipedia_records(
     topic: str,
     *,
@@ -162,13 +212,21 @@ async def fetch_crossref_records(
             continue
         doi = (it.get("DOI") or "").strip()
         abstract_raw = it.get("abstract")
-        abstract = _strip_jats_like_abstract(abstract_raw) if isinstance(abstract_raw, str) else ""
+        abstract = ""
+        if isinstance(abstract_raw, str):
+            abstract = _strip_jats_like_abstract(abstract_raw)
         if not abstract:
             subs = it.get("subtitle") or []
             if isinstance(subs, list) and subs:
-                abstract = " ".join(subs).strip()
+                abstract = " ".join(str(x).strip() for x in subs if str(x).strip()).strip()
         if not abstract:
-            abstract = "(Crossref record has no abstract text.)"
+            abstract = _crossref_metadata_summary(it, doi=doi)
+        venue = ""
+        ct = it.get("container-title")
+        if isinstance(ct, list) and ct:
+            venue = str(ct[0]).strip()
+        elif isinstance(ct, str):
+            venue = ct.strip()
         pub = ""
         for key in ("published-print", "published-online", "created", "issued"):
             dp = it.get(key)
@@ -186,6 +244,7 @@ async def fetch_crossref_records(
                 published=pub,
                 abs_url=url,
                 source="crossref",
+                venue=venue,
             )
         )
     return tuple(out)
