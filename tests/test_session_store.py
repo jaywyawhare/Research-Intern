@@ -1,20 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 
-import pytest
-
-pytest.importorskip("aiosqlite")
+from backend.session_store import MemorySessionStore
 
 
-def test_sqlite_session_roundtrip(tmp_path: Path) -> None:
-    from backend.session_store import SqliteSessionStore
-
+def test_memory_session_roundtrip() -> None:
     async def run() -> None:
-        dbp = tmp_path / "s.db"
-        s = SqliteSessionStore(str(dbp))
-        await s.init_schema()
+        s = MemorySessionStore()
         rec = await s.create("  quantum  ", use_hydra=False)
         sid = rec.session_id
         assert rec.status == "pending"
@@ -25,6 +18,5 @@ def test_sqlite_session_roundtrip(tmp_path: Path) -> None:
         assert g is not None
         assert g.status == "ready"
         assert len(g.transcript) == 1
-        assert (tmp_path / "s.db").exists()
 
     asyncio.run(run())
