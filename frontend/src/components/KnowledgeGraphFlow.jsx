@@ -21,14 +21,14 @@ const NODE_COLORS = {
 };
 
 const EDGE_COLORS = {
-  RELATED_TO: '#7d8fa3',
-  USES: '#4dabf7',
-  PART_OF: '#b197fc',
-  CAUSES: '#ff8787',
-  USES_TOOL: '#63e6be',
-  PUBLISHED_BY: '#74c0fc',
-  MEMBER_OF: '#c0eb75',
-  default: '#5c6f82',
+  RELATED_TO: '#5a6b7d',
+  USES: '#2b8ad4',
+  PART_OF: '#8b5cf6',
+  CAUSES: '#dc5252',
+  USES_TOOL: '#2db88c',
+  PUBLISHED_BY: '#3a9fd4',
+  MEMBER_OF: '#8cc04a',
+  default: '#4a5d6e',
 };
 
 const NODE_RADIUS = 8;
@@ -197,20 +197,25 @@ export function KnowledgeGraphFlow({
       if (selected) {
         ctx.save();
         ctx.beginPath();
-        ctx.arc(x, y, r + 5 / Math.max(0.5, globalScale), 0, 2 * Math.PI, false);
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.95)';
-        ctx.lineWidth = Math.max(2, 2.4 / globalScale);
+        ctx.arc(x, y, r + 6 / Math.max(0.5, globalScale), 0, 2 * Math.PI, false);
+        ctx.strokeStyle = 'rgba(45, 120, 200, 0.8)';
+        ctx.lineWidth = Math.max(2, 2.8 / globalScale);
         ctx.stroke();
         ctx.restore();
       }
 
       ctx.save();
       ctx.beginPath();
+      ctx.arc(x, y, r + 1.2 / globalScale, 0, 2 * Math.PI, false);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+
+      ctx.beginPath();
       ctx.arc(x, y, r, 0, 2 * Math.PI, false);
       ctx.fillStyle = node.color;
       ctx.fill();
-      ctx.strokeStyle = node.stroke || 'rgba(15, 23, 42, 0.65)';
-      ctx.lineWidth = Math.max(1, 1.15 / globalScale);
+      ctx.strokeStyle = node.stroke || 'rgba(30, 30, 30, 0.5)';
+      ctx.lineWidth = Math.max(1, 1.3 / globalScale);
       ctx.stroke();
       ctx.restore();
     },
@@ -257,10 +262,10 @@ export function KnowledgeGraphFlow({
       )}
       <div
         ref={surfaceRef}
-        className="relative h-[min(620px,calc(100vh-14rem))] min-h-[420px] w-full min-w-0 overflow-hidden rounded-xl border border-slate-700/50 bg-[#0c0f14]"
+        className="relative h-[min(620px,calc(100vh-14rem))] min-h-[420px] w-full min-w-0 overflow-hidden rounded-xl border border-border/40 bg-[#f5f0e8]"
         style={{
           backgroundImage:
-            'radial-gradient(circle at 1px 1px, rgba(71, 85, 105, 0.22) 1px, transparent 0)',
+            'radial-gradient(circle at 1px 1px, rgba(180, 170, 155, 0.35) 1px, transparent 0)',
           backgroundSize: '24px 24px',
         }}
       >
@@ -318,7 +323,32 @@ export function KnowledgeGraphFlow({
         </div>
       </div>
 
-      <p className="text-[10px] text-muted-foreground/70">
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border/40 bg-[#faf6ee]/80 px-4 py-2.5 text-xs">
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Nodes</span>
+          {Object.entries(NODE_COLORS).map(([kind, c]) => (
+            <span key={kind} className="flex items-center gap-1.5">
+              <span
+                className="inline-block h-3 w-3 rounded-full border border-black/10 shadow-sm"
+                style={{ background: `radial-gradient(circle at 35% 35%, ${c.fill}, ${c.stroke})` }}
+              />
+              <span className="text-muted-foreground">{kind}</span>
+            </span>
+          ))}
+        </div>
+        <span className="hidden h-4 w-px bg-border sm:block" />
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Edges</span>
+          {Object.entries(EDGE_COLORS).map(([pred, color]) => (
+            <span key={pred} className="flex items-center gap-1.5">
+              <span className="inline-block h-0.5 w-5 rounded-full" style={{ background: color }} />
+              <span className="font-mono text-[10px] text-muted-foreground">{pred.replace(/_/g, ' ')}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <p className="mt-2 text-[10px] text-muted-foreground/60">
         Click node or edge · Esc to clear · hover for names
       </p>
     </div>
